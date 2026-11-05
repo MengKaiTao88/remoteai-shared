@@ -1,5 +1,6 @@
 import { invoke as invokeTauri } from '@tauri-apps/api/core';
 import { hasDirectChatInput } from '../remote-chat/uploadMode';
+import { scopedConversationArgs } from './conversationScope';
 
 export const isDesktopApp = typeof window !== 'undefined' && "__TAURI_INTERNALS__" in window;
 export const isHostedWebApp = typeof document !== 'undefined' && document
@@ -72,6 +73,7 @@ function requestHostedWebApiKey() {
 }
 
 export async function invoke<T = void>(command: string, args: Record<string, unknown> = {}): Promise<T> {
+  args = scopedConversationArgs(command, args);
   if (isDesktopApp) return invokeTauri<T>(command, args);
   if (!isHostedWebApp) throw new Error(`Native command is unavailable in browser preview: ${command}`);
 
