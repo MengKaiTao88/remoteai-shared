@@ -6,7 +6,7 @@ import { ComposerSuggestion } from './ComposerSuggestion';
 import { ComposerInput } from './ComposerInput';
 import { t, useLanguage } from '../../localization/browserClient';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { ArrowUp, ChevronDown, Pause, Play, Plus,
+import { ArrowUp, Pause, Play, Plus,
   SlidersHorizontal, Square, X } from 'lucide-react';
 import { COMPOSER_ACTION_LABELS } from '../composerAction';
 import { composerLabel } from '../composer';
@@ -14,7 +14,6 @@ import { requestSpeedSuffix } from '../requestSpeed';
 import { useDesktopLayout } from '../../layout/useDesktopLayout';
 import { ComposerAccess, ComposerDesktopStatus } from './ComposerDesktopControls';
 import { ComposerModelPicker } from './ComposerModelPicker';
-import { ComposerSpeedIndicator } from './ComposerSpeedIndicator';
 import { ChatSettings } from './ChatSettings';
 import { ModelRefreshButton } from './ModelRefreshButton';
 import { ComposerFooter } from './ComposerFooter';
@@ -35,6 +34,7 @@ import { useComposerState } from './useComposerState';
 import type { ComposerProps } from './composerProps';
 import './composer.css';
 import './composerDesktop.css';
+import './composerReading.css';
 
 export function ChatComposer(props: ComposerProps) {
   useLanguage();
@@ -192,8 +192,8 @@ export function ChatComposer(props: ComposerProps) {
           <button type="button" className="chat-composer-add" aria-label={t("client.chat.addContent")} aria-expanded={adding}
             disabled={busy} onPointerDown={event => event.preventDefault()}
             onClick={() => { menu.close(); setAdding(value => !value); }}><Plus size={desktop ? 18 : 24} /></button>
-          {desktop && <ComposerAccess key={`${threadId}:${active}`} selection={selection}
-            settingsBusy={settingsBusy} updateSettings={updateSettings} beforeOpen={closeMenus} />}
+          <ComposerAccess key={`${threadId}:${active}`} selection={selection}
+            settingsBusy={settingsBusy} updateSettings={updateSettings} beforeOpen={closeMenus} />
           <div className="chat-composer-trailing">
             {desktop && <ComposerDesktopStatus key={`status:${threadId}:${cwd}:${active}`} props={props}
               beforeOpen={closeMenus} metrics={metrics} />}
@@ -204,9 +204,7 @@ export function ChatComposer(props: ComposerProps) {
               aria-label={t("client.chat.chatSettings", {
                 value1: label, value2: requestSpeedSuffix(selection.speed, displayText) })}
               onClick={showSettings}>
-              {compact && <SlidersHorizontal size={20} />}
-              {!compact && <><span>{label}</span><ComposerSpeedIndicator speed={selection.speed} />
-                <ChevronDown size={12} /></>}
+              <SlidersHorizontal size={20} />
             </button>}
             {props.dictation && <ComposerDictation key={`dictation:${threadId}:${cwd}`} client={props.dictation}
               buttonClassName={voiceAction ? 'chat-composer-submit' : undefined}

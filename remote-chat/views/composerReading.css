@@ -1,0 +1,28 @@
+/* Keep a dedicated writing area above the actions on touch screens, even for an empty draft. */
+@media (max-width: 860px) {
+  .chat-composer-dock { container: chat-composer-dock / inline-size; padding-bottom: 10px; }
+  .chat-conversation .chat-composer {
+    padding: 10px 12px 8px; border: 1px solid var(--chat-border); border-radius: 24px;
+    box-shadow: 0 3px 14px #173c280a;
+  }
+  .chat-conversation .chat-composer:focus-within { border-color: var(--chat-green); }
+  .chat-conversation .chat-composer textarea { min-height: 4em; padding: 6px 4px 10px; }
+  .chat-conversation .chat-composer-placeholder { top: 6px; left: 4px; right: 4px; }
+  .chat-conversation .is-compact .chat-composer-content { padding-inline: 0; }
+  .chat-conversation .is-compact .chat-composer-actions { position: static; pointer-events: auto; }
+  .chat-conversation .is-compact .chat-composer-trailing { flex: 1; }
+  .chat-composer-actions, .chat-composer-trailing { gap: 4px; }
+  .chat-composer .chat-model { flex: 0 0 40px; width: 40px; padding: 0; justify-content: center; }
+  .chat-composer-access {
+    display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 38%; min-height: 40px;
+    border: 0; border-radius: 999px; padding: 4px 6px; background: transparent;
+    color: var(--chat-muted); font: inherit; font-size: 12px; text-align: left;
+  }
+  .chat-composer-access svg { flex-shrink: 0; }
+  .chat-composer-access > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chat-composer-access.is-full-access { color: var(--app-warning, #b8860b); }
+  .chat-composer-access:focus-visible { outline: 2px solid var(--chat-green); outline-offset: 2px; }
+  @container chat-composer-dock (max-width: 330px) {
+    .chat-composer-access > span { display: none; }
+  }
+}

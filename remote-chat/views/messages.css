@@ -45,7 +45,7 @@
     + :is(.chat-entry-process, .chat-entry-activities)[data-response-continuation] { margin-top: -16px; }
   .chat-activity { min-height: 36px; padding-block: 3px; }
   .chat-activity .chat-activity-text {
-    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1;
     white-space: normal; overflow-wrap: anywhere; line-height: 20px;
   }
   .chat-message-content .chat-user-message { padding: 15px; }
