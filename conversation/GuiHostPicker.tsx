@@ -1,7 +1,7 @@
 import { uiText } from "../localization/uiText";
 import { remoteErrorText } from "../localization/errors";
-import { useEffect, useRef, useState } from 'react';
-import { Popover, type InputRef } from 'antd';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { Popover, theme, type InputRef } from 'antd';
 import { Check, ChevronDown, Laptop, Monitor } from 'lucide-react';
 import { ComputerSearchBar } from '../remote-chat/ComputerSearchBar';
 import type { GuiComputerNavigation } from './remote/types';
@@ -9,6 +9,7 @@ import projectStyles from './ProjectPicker.module.less';
 import styles from './GuiHostPicker.module.less';
 
 export function GuiHostPicker({ navigation, active }: { navigation: GuiComputerNavigation; active: boolean }) {
+  const { token } = theme.useToken();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const trigger = useRef<HTMLButtonElement>(null);
@@ -26,7 +27,9 @@ export function GuiHostPicker({ navigation, active }: { navigation: GuiComputerN
     if (!active || (device && !device.online)) return;
     close(); navigation.choose(device);
   };
-  const panel = <div className={projectStyles.panel} onKeyDown={event => {
+  const panel = <div className={projectStyles.panel} style={{
+    '--picker-hover': token.colorFillTertiary, '--picker-muted': token.colorTextSecondary,
+  } as CSSProperties} onKeyDown={event => {
     if (event.key === 'Escape') { event.stopPropagation(); close(); }
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     const options = Array.from(list.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []);

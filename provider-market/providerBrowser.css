@@ -29,14 +29,21 @@
   min-width: 130px; max-width: 230px; border-radius: 9px 9px 0 0;
   padding: 3px 4px; border: 1px solid transparent; }
 .pm-browser-tab.active { background: var(--panel-bg, #fff); border-color: var(--border, #dce1e8); border-bottom-color: transparent; }
+.pm-browser-tab:not(.active):hover { background: var(--hover-bg, #e8edf4); border-radius: 12px; }
 .pm-browser-tab > button:first-child { min-width: 0; flex-shrink: 1; }
+.pm-browser .pm-browser-tab > button:first-child:hover { background: transparent; }
+.pm-browser .pm-browser-tab > button:last-child { min-width: 24px; min-height: 24px; width: 24px; height: 24px;
+  padding: 4px; border-radius: 50%; }
+.pm-browser .pm-browser-tab > button:last-child:hover {
+  background: color-mix(in srgb, var(--text, #182230) 12%, transparent); }
 .pm-browser-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pm-browser-tab svg { flex-shrink: 0; }
 .pm-browser .pm-browser-tabs-more { border-left: 1px solid var(--border, #dce1e8); border-radius: 0; margin-left: 4px; }
 .pm-browser-tabs-menu { width: 300px; max-width: min(400px, calc(100vw - 16px)); z-index: 1700; }
 .pm-browser-tabs-menu .ant-dropdown-menu { max-height: min(440px, 60vh); overflow-y: auto; }
 .pm-browser-tabs-menu-item { display: flex; align-items: center; gap: 8px; }
-.pm-browser-tabs-menu-item > span { flex: 1; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.pm-browser-tabs-menu-item > span:not(.provider-website-icon) {
+  flex: 1; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .pm-browser-tabs-menu-item > svg { flex-shrink: 0; }
 .pm-browser-toolbar { position: relative; display: flex; gap: 6px; padding: 10px; align-items: center;
   border-bottom: 1px solid var(--border, #dce1e8); }

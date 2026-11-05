@@ -5,6 +5,7 @@ import { useTabOverflow } from '../project-browser/useTabOverflow';
 import type { BrowserTab } from './browserState';
 import type { MarketText } from './i18n';
 import { BrowserTabItem } from './BrowserTabItem';
+import { ProviderWebsiteIcon } from './ProviderWebsiteIcon';
 
 interface Props {
   tabs: BrowserTab[]; activeId: string; visible: boolean; t: MarketText;
@@ -50,7 +51,7 @@ export function BrowserTabs({ tabs, activeId, visible, t, select, close, closeTa
       placement="bottomRight" getPopupContainer={trigger => trigger.parentElement ?? trigger}
       overlayClassName="pm-browser-tabs-menu" menu={{ 'aria-label': t('market.browserHiddenTabs'),
         items: hidden.map(tab => ({ key: tab.id, label: <div className="pm-browser-tabs-menu-item">
-          <Globe size={14} /><span>{name(tab)}</span>
+          <ProviderWebsiteIcon url={tab.url} size={14} fallback={<Globe size={14} />} /><span>{name(tab)}</span>
           <button type="button" aria-label={t('market.browserCloseTab', { name: name(tab) })}
             onClick={event => { event.stopPropagation(); closeTab(tab.id); }}><X size={14} /></button>
         </div> })), onClick: ({ key }) => choose(key),

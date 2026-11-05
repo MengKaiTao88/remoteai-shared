@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Globe, Maximize2, Minimize2, Plus, RotateCw, X } from 'lucide-react';
 import { marketText, type MarketText } from './i18n';
 import type { Language } from '@remoteai/i18n';
-import { pageUrl } from './pageLink';
+import { browserAddress } from './browserAddress';
 import type { BrowserAction, BrowserTab } from './browserState';
 import { BrowserTabs } from './BrowserTabs';
+import { ProviderWebsiteIcon } from './ProviderWebsiteIcon';
 import './providerBrowser.css';
 
 export interface BrowserSurfaceProps {
@@ -43,11 +44,12 @@ function BrowserToolbar({ tab, fullscreen, toggleFullscreen, navigate, action, t
       if (tab?.url.startsWith('file:') && address.trim() === tab.url) {
         setInvalid(false); action('reload'); return;
       }
-      const url = pageUrl(address.trim());
+      const url = browserAddress(address);
       setInvalid(!url);
-      if (url) navigate(url.toString());
+      if (url) { setAddress(url.href); navigate(url.href); }
     }}>
-      <Globe size={15} /><input aria-label={t('market.browserAddress')} aria-invalid={invalid}
+      <ProviderWebsiteIcon url={tab?.url} size={15} fallback={<Globe size={15} />} />
+      <input aria-label={t('market.browserAddress')} aria-invalid={invalid}
         value={address} onChange={(event) => { setAddress(event.target.value); setInvalid(false); }}
         placeholder="https://example.com" spellCheck={false} autoComplete="off" />
       <button type="submit" aria-label={t('market.visitPage')}><ArrowRight size={16} /></button>
