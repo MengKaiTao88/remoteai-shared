@@ -32,7 +32,7 @@
 .sidebar { --sidebar-inline-padding: 14px; --sidebar-bottom-padding: 12px;
   width: 236px; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 8px;
-  padding: 8px var(--sidebar-inline-padding) var(--sidebar-bottom-padding);
+  padding: 12px var(--sidebar-inline-padding) var(--sidebar-bottom-padding);
   min-height: 0; background: var(--bg, #f6f8f7); }
 .sidebarHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px;
   min-height: 24px; flex-shrink: 0; padding: 0 6px; }
@@ -44,8 +44,8 @@
     background-image: var(--title-gradient);
     background-clip: text;
     -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
+    color: var(--ink);
+    -webkit-text-fill-color: var(--ink);
   }
 }
 :global(:root[data-theme='dark']) .sidebarTitle {
@@ -61,25 +61,9 @@
   cursor: default;
 }
 .sidebar .threadFilter {
-  --filter-radius: 999px;
-  --filter-highlight: color-mix(in srgb, var(--panel) 78%, transparent);
-  flex-shrink: 0; padding: 3px; border-radius: var(--filter-radius);
-  border: 1px solid color-mix(in srgb, var(--panel) 65%, var(--gui-border));
-  background: color-mix(in srgb, var(--panel) 42%, transparent);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  backdrop-filter: blur(18px) saturate(140%);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--panel) 65%, transparent), 0 2px 8px #00000008;
-  :global(.ant-segmented-item), :global(.ant-segmented-thumb) { border-radius: var(--filter-radius); }
-  :global(.ant-segmented-item) { color: var(--gui-muted); }
-  :global(.ant-segmented-item)::after { border-radius: inherit; }
-  :global(.ant-segmented-item-selected), :global(.ant-segmented-thumb) {
-    background: var(--filter-highlight); color: var(--ink);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--panel) 85%, transparent), 0 1px 4px #00000012;
-  }
-  &:not(:global(.ant-segmented-disabled)) :global(.ant-segmented-item):hover { color: var(--ink); }
-  &:global(.ant-segmented-disabled) :global(.ant-segmented-item) {
-    color: color-mix(in srgb, var(--gui-muted) 50%, transparent);
-  }
+  flex-shrink: 0; width: fit-content; min-width: 110px;
+  color: var(--gui-muted); background: transparent; box-shadow: none;
+  :global(.ant-select-selector) { padding-inline: 6px; }
 }
 .page .sidebar .threadList {
   .thread-scrollbar(var(--gui-muted));
@@ -87,18 +71,18 @@
   // Extend the scroll area to the sidebar edge while keeping the rows inset.
   margin: 0 -14px 2px -6px; padding-right: 8px;
 }
-.thread { display: flex; align-items: center; border-radius: 9px; min-width: 0; margin: 2px 0; }
+.thread { display: flex; align-items: center; border-radius: 7px; min-width: 0; margin: 1px 0; }
 .thread:hover { background: var(--green-selection-hover); }
 .thread.selected { background: var(--green-selection); }
 .threadSelect { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; text-align: left;
-  border: 0; background: transparent; color: inherit; padding: 10px 7px; cursor: pointer; }
+  border: 0; background: transparent; color: inherit; padding: 8px 7px; cursor: pointer; }
 .threadTitle { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap;
   text-overflow: ellipsis; font-size: calc(var(--gui-font-size, 14px) - 1px); }
 .runningDot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.runningDot { background: #21a779; box-shadow: 0 0 0 3px #21a77915; }
+.runningDot { background: var(--ink); }
 .workspace { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.header { display: flex; align-items: center; gap: 6px; padding: 4px 14px; flex-shrink: 0;
-  box-sizing: border-box; height: 38px; min-height: 38px;
+.header { display: flex; align-items: center; gap: 6px; padding: 6px 16px; flex-shrink: 0;
+  box-sizing: border-box; height: 44px; min-height: 44px;
   button:global(.ant-btn) { height: var(--workspace-toolbar-button-size, 32px);
     min-width: var(--workspace-toolbar-button-size, 32px); padding: 0 6px; gap: 4px;
     font-size: calc(var(--gui-font-size, 14px) - 2px); line-height: max(18px, 1.4em); }
@@ -137,6 +121,7 @@
     > svg { flex-shrink: 0; transition: transform .12s ease; }
   }
   &[open] > summary > svg { transform: rotate(90deg); }
+  &[open] > summary { padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--gui-border); }
 }
 .workItems { display: flex; flex-direction: column; gap: 6px; padding: 6px 0 0;
   .agentMessage { color: var(--ink); } }
@@ -156,7 +141,7 @@
   font-variant-numeric: tabular-nums; }
 .userMessage { align-self: flex-end; max-width: 70%; min-width: 0;
   &:hover .userMessageActions, &:focus-within .userMessageActions { opacity: 1; pointer-events: auto; } }
-.userBubble { background: var(--gui-chat-surface); border-radius: 20px;
+.userBubble { background: var(--codex-elevated, var(--gui-chat-surface)); border-radius: 18px;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gui-border) 50%, transparent);
   -webkit-backdrop-filter: var(--gui-chat-backdrop); backdrop-filter: var(--gui-chat-backdrop);
   padding: 12px 16px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; }
@@ -199,11 +184,11 @@
   }
   :global(.ant-select) { width: 120px; } }
 .localLabel { font-size: calc(var(--gui-font-size, 14px) - 2px); color: var(--gui-muted); margin-left: auto; }
-.composer { position: relative; border: 1px solid var(--gui-border); border-radius: 22px;
+.composer { position: relative; border: 1px solid var(--gui-border); border-radius: 18px;
   background: var(--gui-composer-surface);
   container: gui-composer / inline-size; padding: 12px var(--gui-composer-padding) 9px;
-  box-shadow: 0 3px 14px #173c280a;
-  &:focus-within { border-color: var(--green); }
+  box-shadow: 0 2px 8px #00000005;
+  &:focus-within { border-color: var(--muted); }
   &[data-file-dragging] { border-color: var(--green); outline: 2px solid var(--green); outline-offset: 2px; }
   textarea:global(.ant-input) { border: 0; background: transparent; resize: none; box-shadow: none;
     padding: 5px 8px 12px; font-size: var(--gui-font-size, 14px); } }

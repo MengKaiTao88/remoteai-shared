@@ -1,4 +1,5 @@
 import { displayError, displayText } from '../../localization/browserClient';
+import { MessageDeliveryMode } from '../../chat/MessageDeliveryMode';
 import { flushSync } from 'react-dom';
 import { ComposerDictation } from '../../chat/dictation/ComposerDictation';
 import { useComposerSuggestion } from '../../chat/useComposerSuggestion';
@@ -192,6 +193,7 @@ export function ChatComposer(props: ComposerProps) {
           <button type="button" className="chat-composer-add" aria-label={t("client.chat.addContent")} aria-expanded={adding}
             disabled={busy} onPointerDown={event => event.preventDefault()}
             onClick={() => { menu.close(); setAdding(value => !value); }}><Plus size={desktop ? 18 : 24} /></button>
+          <MessageDeliveryMode disabled={busy} />
           <ComposerAccess key={`${threadId}:${active}`} selection={selection}
             settingsBusy={settingsBusy} updateSettings={updateSettings} beforeOpen={closeMenus} />
           <div className="chat-composer-trailing">

@@ -3,7 +3,7 @@ import { HistoryContent, useHistoryWindowed } from './HistoryContent';
 import { useMobileHistoryAnchor } from './useMobileHistoryAnchor';
 import { Fragment, memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useCommittedCallback } from '../../chat/useCommittedCallback';
-import { ArrowDown, ChevronDown, ChevronRight, Terminal } from 'lucide-react';
+import { ArrowDown, ChevronRight, Terminal } from 'lucide-react';
 import type { ChatMessagesProps } from '../client/messageProps';
 import { useConversationEntries } from '../../chat/useConversationEntries';
 import { currentRunningTurn } from '../../chat/runningTurn';
@@ -30,27 +30,15 @@ import type { Item, Turn } from './types';
 
 export type RenderUserMessage = (props: { item: Item; turn: Turn }) => ReactNode;
 
-function WorkSummary({ entry, open, inline, desktop }: {
-  entry: WorkEntry; open: () => void; inline: (id: string, value: boolean) => void;
-  desktop: boolean;
+function WorkSummary({ entry, inline }: {
+  entry: WorkEntry; inline: (id: string, value: boolean) => void;
 }) {
   useLanguage();
-  const running = entry.turn.status === 'inProgress';
-  const elapsed = entry.timed ? turnElapsedMs(entry.turn, 0) : null;
-  const label = elapsed == null ? (running ? t("client.chat.working") : t("client.chat.activity")) : t("client.chat.duration", { value1: formatTurnDuration(elapsed) });
-  if (desktop) return <div className="chat-work-summary chat-desktop-work">
+  return <div className="chat-work-summary chat-desktop-work">
     <button type="button" aria-label={t("client.chat.viewActivityActions", { value1: entry.items.length })} aria-expanded={entry.inline}
       onClick={() => inline(entry.turn.id, !entry.inline)}>
       <span>{entry.timed ? <ChatTurnTiming turn={entry.turn} fallback={t("client.chat.activity")} /> : t("client.chat.activity")}</span>
       <ChevronRight size={14} /></button>
-  </div>;
-  return <div className="chat-work-summary">
-    <button type="button" aria-label={t("client.chat.viewActivityActions", { value1: entry.items.length })} onClick={open}>
-      <span>{label}</span><ChevronRight size={14} /></button>
-    {(entry.inline || ['inProgress', 'interrupted', 'failed'].includes(entry.turn.status)) &&
-      <button type="button" aria-expanded={entry.inline} aria-label={entry.inline ? t("client.chat.collapseActivity") : t("client.chat.expandActivity")}
-        onClick={() => inline(entry.turn.id, !entry.inline)}>
-        <span>{entry.inline ? t("client.chat.collapse") : t("client.chat.expand")}</span><ChevronDown size={14} /></button>}
   </div>;
 }
 
@@ -69,12 +57,12 @@ const TimelineEntry = memo(function TimelineEntry({ entry, open, inline, desktop
   }, [inline, open, process, turnId]);
   if (entry.kind === 'activities') {
     const item = latestActivity(entry.items);
-    return item && <ChatActivity item={item} count={entry.items.length}
+    return item && <ChatActivity item={item} items={entry.items}
       running={entry.turn.status === 'inProgress' && item.status === 'inProgress'}
-      inline={desktop} onInspect={inspect}
-      content={desktop ? () => entry.items.map(activity => <ChatMessage key={activity.id} item={activity} process desktop
+      inline onInspect={inspect}
+      content={() => entry.items.map(activity => <ChatMessage key={activity.id} item={activity} process desktop={desktop}
         running={entry.turn.status === 'inProgress' && activity.status === 'inProgress'}
-        onInspect={inspect} onOpen={openItem} />) : undefined}
+        onInspect={inspect} onOpen={openItem} />)}
       onOpen={() => open({ type: 'activities', id: entry.id })} />;
   }
   if (entry.kind === 'duration') {
@@ -84,8 +72,7 @@ const TimelineEntry = memo(function TimelineEntry({ entry, open, inline, desktop
   }
   if (entry.kind === 'summary') return <ChatTurnSummary turn={entry.turn} hideStopped={desktop}
     onOpen={panel => open({ type: 'turn', id: entry.turn.id, panel })} />;
-  if (entry.kind === 'work') return <WorkSummary entry={entry} inline={inline} desktop={desktop}
-    open={() => open({ type: 'work', id: entry.id })} />;
+  if (entry.kind === 'work') return <WorkSummary entry={entry} inline={inline} />;
   if (entry.item.type === 'userMessage' && renderUserMessage) {
     return renderUserMessage({ item: entry.item, turn: entry.turn });
   }
@@ -132,7 +119,7 @@ function ChatMessageHistory({ props, scroll }: {
   const turns = useMemo(() => (thread?.turns ?? []).map(turn => offline && turn.status === 'inProgress'
     ? { ...turn, status: 'cached' } : turn), [thread?.turns, offline]);
   const { entries, setInline } = useConversationEntries(turns);
-  const timeline = useMemo(() => activityTimeline(desktop ? desktopTimeline(entries) : entries), [desktop, entries]);
+  const timeline = useMemo(() => activityTimeline(desktopTimeline(entries)), [entries]);
   const runningTurn = currentRunningTurn(turns);
   const runningSummary = timeline.find(entry => entry.kind === 'summary' && entry.turn.id === runningTurn?.id);
   const [selection, setSelection] = useState<Selection | null>(null);

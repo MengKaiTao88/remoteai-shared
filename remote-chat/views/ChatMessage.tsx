@@ -26,7 +26,7 @@ export const ChatMessage = memo(function ChatMessage({ item, onOpen, process = f
   const text = questionMessageText(item);
   if (!['userMessage', 'agentMessage'].includes(item.type)) {
     return <ChatActivity item={item} onOpen={onOpen} running={running && item.status === 'inProgress'}
-      inline={desktop} onInspect={onInspect} />;
+      inline onInspect={onInspect} />;
   }
   const user = item.type === 'userMessage';
   const content = quotedMessage(text);
@@ -52,7 +52,7 @@ export const ChatMessage = memo(function ChatMessage({ item, onOpen, process = f
         {images.map((source, index) => <ChatImage key={index} source={source} />)}
       </div>}
     </div> : <ChatMarkdown text={text} process={process} desktop={desktop} />}
-    {!!text.trim() && !running && !(desktop && process) && <div className="chat-message-actions" data-quote-exclude>
+    {!!text.trim() && !running && !process && <div className="chat-message-actions" data-quote-exclude>
       <ChatCopyButton text={text} label={user ? t("client.chat.copyMessage") : t("client.chat.copyReply")} iconOnly={!user} />
       <ChatQuoteButton messageId={item.id} text={text} role={user ? 'user' : 'assistant'} onQuote={onQuote} />
     </div>}
