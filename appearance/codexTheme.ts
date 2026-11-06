@@ -1,6 +1,6 @@
 import type { ThemeConfig } from 'antd';
 
-/** This local edition uses one neutral palette across every application surface. */
+/** The GUI chat workspace uses a neutral palette without changing its host application theme. */
 export function codexThemeTokens(dark: boolean): ThemeConfig['token'] {
   return {
     colorPrimary: dark ? '#ededed' : '#242424',
