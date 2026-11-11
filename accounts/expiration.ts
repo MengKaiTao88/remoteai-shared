@@ -4,10 +4,12 @@ function expirationTimestamp(value?: string | null) {
   return Number.isNaN(timestamp) ? null : timestamp;
 }
 
-function displayExpirationDate(value: string) {
+export function displayExpirationDate(value: string) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toISOString().slice(0, 10);
+  if (Number.isNaN(date.getTime())) return value;
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')].join('-');
 }
 
 export function earliestExpirationDate(
