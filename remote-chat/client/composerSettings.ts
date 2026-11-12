@@ -55,6 +55,7 @@ export class RemoteComposerSettings {
   private show() {
     const entry = this.entry(this.scope());
     this.host.update({ ...(entry.remote ? { models: entry.remote.models } : {}),
+      accessUpdate: entry.remote?.accessUpdate,
       settings: { ...(entry.remote?.settings ?? DEFAULT_COMPOSER), ...entry.pending },
       settingsBusy: Boolean(entry.remote?.syncing || entry.reading || entry.saving || entry.failed || entry.readFailed
         || entry.catalogUnavailable || Object.keys(entry.pending).length || (this.scoped && !entry.remote)),

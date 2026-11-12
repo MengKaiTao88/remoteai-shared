@@ -8,6 +8,7 @@ export const COMPOSER_FIELDS = ['model', 'effort', 'access', 'speed'] as const;
 export interface ComposerSnapshot {
   models: Model[]; settings: ComposerSettings; revision: number;
   syncing?: boolean;
+  accessUpdate?: 'nextTurn';
   /** Omitted by older hosts; null is the new-conversation draft. */
   threadId?: string | null;
 }

@@ -22,6 +22,7 @@ export interface NativeFileDrop {
 }
 
 export interface ComposerProps {
+  accessUpdate?: 'nextTurn';
   dictation?: import('../../chat/dictation/client').DictationClient;
   recoveredEdit?: import('../queue').QueueDraft;
   consumeRecoveredEdit?: () => void;

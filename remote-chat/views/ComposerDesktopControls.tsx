@@ -1,7 +1,7 @@
 import { displayText } from '../../localization/browserClient';
 import { useRef, useState, type KeyboardEvent } from 'react';
-import { Popover } from 'antd';
-import { Check, Hand, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Popover, Tooltip } from 'antd';
+import { Check, Clock3, Hand, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { ACCESS_OPTIONS } from '../composer';
 import { t, useLanguage } from '../../localization/browserClient';
 import { UsageAmounts } from '../../chat/UsageAmounts';
@@ -22,8 +22,8 @@ function moveAccessFocus(event: KeyboardEvent<HTMLDivElement>) {
   options[next]?.focus();
 }
 
-export function ComposerAccess({ selection, settingsBusy, updateSettings, beforeOpen }: Pick<ComposerProps,
-  'selection' | 'settingsBusy' | 'updateSettings'> & { beforeOpen: () => void }) {
+export function ComposerAccess({ selection, settingsBusy, updateSettings, beforeOpen, accessUpdate }: Pick<ComposerProps,
+  'selection' | 'settingsBusy' | 'updateSettings' | 'accessUpdate'> & { beforeOpen: () => void }) {
   useLanguage();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -56,6 +56,9 @@ export function ComposerAccess({ selection, settingsBusy, updateSettings, before
       aria-label={t("client.chat.access", { value1: displayText(selected.label) })}
       onKeyDown={event => { if (event.key === 'Escape') setOpen(false); }}>
       <Icon size={16} aria-hidden="true" /><span>{displayText(selected.label)}</span>
+      {accessUpdate === 'nextTurn' && <Tooltip title={t('client.conversation.takesEffectWithTheNextConversationTurn')}
+        styles={{ root: { maxWidth: 400 } }}><span role="img" aria-label={t('client.conversation.takesEffectWithTheNextConversationTurn')}>
+          <Clock3 size={14} aria-hidden="true" /></span></Tooltip>}
     </button>
   </Popover>;
 }

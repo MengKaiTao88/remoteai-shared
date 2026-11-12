@@ -195,6 +195,7 @@ export function ChatComposer(props: ComposerProps) {
             onClick={() => { menu.close(); setAdding(value => !value); }}><Plus size={desktop ? 18 : 24} /></button>
           <MessageDeliveryMode disabled={busy} />
           <ComposerAccess key={`${threadId}:${active}`} selection={selection}
+            accessUpdate={props.accessUpdate}
             settingsBusy={settingsBusy} updateSettings={updateSettings} beforeOpen={closeMenus} />
           <div className="chat-composer-trailing">
             {desktop && <ComposerDesktopStatus key={`status:${threadId}:${cwd}:${active}`} props={props}

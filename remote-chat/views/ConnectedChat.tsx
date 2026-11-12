@@ -151,6 +151,7 @@ export function ConnectedChat({ chat, device, devices, active, scope, email, cho
       readUsage={controller.readUsage} tokenUsage={state.selected?.tokenUsage}
       readConversationMetrics={controller.readConversationMetrics}
       settingsBusy={state.settingsBusy || !!state.workspaceBusy} settingsError={state.settingsError}
+      accessUpdate={state.accessUpdate}
       updateSettings={(settings) => controller.setSettings(settings)}
       refreshModels={controller.refreshModels}
       active={active} ready={ready && !state.selectedArchived} sending={state.sending} running={running}
