@@ -77,7 +77,13 @@
     font-size: 12px; gap: 6px; color: var(--app-muted, #7b8781);
   }
   .chat-message-region .chat-desktop-work button[aria-expanded='true'] > svg { transform: rotate(90deg); }
-  .chat-message-region .chat-entry-process { margin-top: -4px; }
+  /* Match local turns: 10px between response parts, 6px below the header and 8px between work rows. */
+  .chat-message-region .chat-message-content > [data-response-continuation] { margin-top: -8px; }
+  .chat-message-region .chat-entry-work
+    + :is(.chat-entry-process, .chat-entry-activities)[data-response-continuation] { margin-top: -12px; }
+  .chat-message-region :is(.chat-entry-process, .chat-entry-activities)
+    + :is(.chat-entry-process, .chat-entry-activities)[data-response-continuation] { margin-top: -10px; }
+  .chat-message-region .chat-entry-process { gap: 8px; }
   .chat-message-region .chat-entry-summary:has(.chat-turn-summary:empty) { display: none; }
   .chat-message-region .chat-process-prose { color: inherit; }
   .chat-message-region .chat-inline-activity .chat-activity { min-height: 28px; padding: 3px 0; gap: 9px; }

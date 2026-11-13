@@ -6,17 +6,22 @@ import { LoungeMessageMenu, type LoungeMessageMenuActions } from './LoungeMessag
 import { LoungeDeliveryStatus } from './LoungeDeliveryStatus';
 import type { LoungeController } from './controller';
 import type { LoungeReply } from './reply';
+import { useGroupReadObserver } from './useGroupReadObserver';
 
 export function LoungeMessageBody({ message, preview, onImageLoad, actions, controller, locate, mobile,
-  showDelivery = true }: {
+  showDelivery = true, history = false }: {
   message: LoungeMessage; preview: (source: string) => void; onImageLoad?: () => void;
   actions?: LoungeMessageMenuActions;
   mobile?: boolean;
   showDelivery?: boolean;
+  history?: boolean;
   controller?: LoungeController; locate?: (reference: LoungeReply) => void;
 }) {
-  const bubble = <div className={`lounge-bubble${!message.text.trim() && message.images.length && !message.reply
-    ? ' image-only' : ''}${message.attachments?.some(file => file.kind === 'file') ? ' has-files' : ''}`}
+  const bubbleRef = useGroupReadObserver({ message, controller, history });
+  const imageOnly = !message.text.trim() && message.images.length > 0 && !message.reply;
+  const hasFiles = message.attachments?.some(file => file.kind === 'file');
+  const bubble = <div ref={bubbleRef}
+    className={`lounge-bubble${imageOnly ? ' image-only' : ''}${hasFiles ? ' has-files' : ''}`}
     tabIndex={actions ? 0 : undefined}>
     {message.reply && <LoungeReplyPreview reply={message.reply} controller={controller} locate={locate} />}
     {message.text && <div className="lounge-text">{message.text}</div>}
@@ -28,5 +33,5 @@ export function LoungeMessageBody({ message, preview, onImageLoad, actions, cont
     </button>)}
   </div>;
   return <>{actions ? <LoungeMessageMenu mobile={mobile} message={message} {...actions}>{bubble}</LoungeMessageMenu> : bubble}
-    {showDelivery && <LoungeDeliveryStatus delivery={message.delivery} />}</>;
+    {showDelivery && <LoungeDeliveryStatus delivery={message.delivery} message={message} controller={controller} />}</>;
 }

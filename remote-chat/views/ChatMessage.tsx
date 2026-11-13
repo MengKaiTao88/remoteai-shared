@@ -1,7 +1,7 @@
 import { t, useLanguage } from '../../localization/browserClient';
 import { DeferredDetails } from '../../chat/DeferredDetails';
 import { memo } from 'react';
-import { Quote } from 'lucide-react';
+import { Pencil, Quote } from 'lucide-react';
 import type { Item } from './types';
 import { itemImageSources } from '../../chat/imageSources';
 import { quotedMessage } from '../../chat/quotedMessage';
@@ -18,9 +18,9 @@ import { MessageAttachments } from '../../chat/SentMessageAttachments';
 import { ChatFileLink } from './ChatFileLink';
 
 export const ChatMessage = memo(function ChatMessage({ item, onOpen, process = false, running = false, onQuote,
-  desktop = false, onInspect }: {
+  desktop = false, onInspect, onEdit, editDisabled }: {
   item: Item; onOpen: (id: string) => void; process?: boolean; running?: boolean; onQuote?: () => void;
-  desktop?: boolean; onInspect?: () => void;
+  desktop?: boolean; onInspect?: () => void; onEdit?: () => void; editDisabled?: boolean;
 }) {
   useLanguage();
   const text = questionMessageText(item);
@@ -52,8 +52,12 @@ export const ChatMessage = memo(function ChatMessage({ item, onOpen, process = f
         {images.map((source, index) => <ChatImage key={index} source={source} />)}
       </div>}
     </div> : <ChatMarkdown text={text} process={process} desktop={desktop} />}
-    {!!text.trim() && !running && !process && <div className="chat-message-actions" data-quote-exclude>
+    {(!!text.trim() || onEdit) && !running && !(desktop && process)
+      && <div className="chat-message-actions" data-quote-exclude>
       <ChatCopyButton text={text} label={user ? t("client.chat.copyMessage") : t("client.chat.copyReply")} iconOnly={!user} />
+      {onEdit && <button type="button" className="chat-text-action"
+        aria-label={t('client.workspaceActions.editMessage')}
+        disabled={editDisabled} onClick={onEdit}><Pencil size={14} /></button>}
       <ChatQuoteButton messageId={item.id} text={text} role={user ? 'user' : 'assistant'} onQuote={onQuote} />
     </div>}
   </article>;

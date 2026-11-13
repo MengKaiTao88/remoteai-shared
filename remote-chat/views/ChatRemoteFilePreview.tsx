@@ -25,7 +25,7 @@ export function ChatRemoteFilePreview({ target, active, navigation, context }: R
       </div>
     </header>
     <div className="chat-remote-file-preview">
-      <ChatFilePreviewContent path={target.path} line={target.line}
+      <ChatFilePreviewContent path={target.path} line={target.line} active={active}
         context={{ ...context, threadId: target.threadId }} />
     </div>
   </section>;

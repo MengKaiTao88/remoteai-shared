@@ -1,4 +1,5 @@
 import type { ChatConnection, ConnectionEvents } from './connection';
+import { createRecoveryClient } from '../../conversation/recovery/types';
 import { modelSelectionError } from '../../conversation/modelSelection';
 import { openPreparedDownload } from '../archiveDownload';
 import { mergeTaskDelivery } from '../taskDelivery';
@@ -38,6 +39,8 @@ import { RemoteGoals } from './goals';
 import { SIDEBAR_EVENT, type SidebarSnapshot } from '../sidebar';
 import { emptyQueue, QUEUE_EVENT, type QueueAction, type QueueSnapshot } from '../queue';
 import { QueueConnection } from './queueConnection';
+import { LocalOutbox, type OutboxMessage } from './localOutbox';
+import { uiText } from '../../localization/uiText';
 import { AsyncAnswers } from './asyncAnswers';
 import { createGuiAccountsClient } from './guiAccounts';
 import { createRemoteDictationClient } from '../dictation';
@@ -55,10 +58,20 @@ import { initialChatState, type ApprovalReply, type ChatProject, type ChatState,
   type ListResponse, type Request, type SendInput, type SkillsResponse, type Thread } from './types';
 
 const SYNCHRONIZATION_RETRY_MS = 3000;
+type ReadErrorSource = 'list' | 'history';
 
 export class ChatController {
+  readonly taskRecovery = createRecoveryClient(body => this.connection.request('request', body),
+    listener => this.subscribeEvents(listener));
+  openRecoveryThread = async (threadId: string) => {
+    try {
+      const result = await this.request<{ thread: Thread }>({ operation: 'read', threadId });
+      await this.select(result.thread);
+    } catch (error) { this.failure(error); }
+  };
   /** Enable before start only when the host UI supports loading individual tool details. */
   deferToolDetails = false;
+  deferProcessDetails = false;
   readonly groups = createRemoteGroups({ ready: () => this.state.ready, generation: () => this.synchronization,
     request: body => this.connection.request('request', body), apply: sidebar => this.applySidebar(sidebar) });
   readonly projectActions = new ProjectActions({ snapshot: () => this.state, update: patch => this.update(patch),
@@ -82,6 +95,7 @@ export class ChatController {
     request: (body) => this.request(body), created: (id, settings) => this.composer.created(id, settings),
     generation: () => this.synchronization });
   private state = initialChatState();
+  private readErrorSource?: ReadErrorSource;
   private readonly listeners = new Set<() => void>();
   private readonly eventListeners = new Set<(event: GuiEvent) => void>();
   private readonly stream = new StreamFrame(events => {
@@ -93,6 +107,8 @@ export class ChatController {
     & Partial<Pick<ChatConnection, 'confirmHostIdentity' | 'reportDiagnostic' | 'retryNow' | 'openNativeMedia'
       | 'downloadsBulk' | 'setBulkSupport' | 'mappingStreams'>>;
   private readonly queueConnection = new QueueConnection((body) => this.connection.request('request', body));
+  private readonly localOutbox = new LocalOutbox({ deliver: message => this.deliverLocalMessage(message),
+    changed: localQueue => this.update({ localQueue }) });
   private readonly asyncAnswers = new AsyncAnswers({ snapshot: () => this.state,
     request: (body) => this.connection.request('request', body), update: (patch) => this.update(patch),
     applyQueue: (queue) => this.applyQueue(queue), refresh: () => this.refreshSelected() });
@@ -164,9 +180,13 @@ export class ChatController {
     if (sshProfiles) this.guiTools.terminal.ssh.profiles = sshProfiles;
     this.historyReader = new HistoryReader((body) => this.connection.request('request', {
       ...body, ...(this.deferToolDetails ? { deferToolDetails: true } : {}),
+      ...(this.deferProcessDetails ? { window: {
+        ...('window' in body ? body.window : {}), deferProcesses: true,
+      } } : {}),
     }), versions);
     if (offline) this.offlineWriter = new OfflineWriter(offline, this.cacheFailure);
     this.connection = createConnection({
+      relayIssue: (relayIssue) => this.update({ relayIssue }),
       mode: (mode) => this.changeMode(mode), error: (error) => {
         this.stream.flush();
         this.update({ error, connectionIssue: error });
@@ -208,6 +228,16 @@ export class ChatController {
     this.eventListeners.add(listener);
     return () => { this.eventListeners.delete(listener); };
   };
+  readonly cliGui: import('../../cli-gui/types').CliTransport = {
+    subscribeAccountChange: listener => this.subscribeEvents(event => {
+      if (event.method === 'guiAccounts/selectionChanged' || event.method === 'claudeAccounts/changed') listener();
+    }),
+    request: request => this.connection.request('request', { operation: 'cliGui', request }),
+    subscribe: listener => this.subscribeEvents(event => { if (event.method === 'cliGui/changed') listener(); }),
+  };
+  readonly claudeAccounts: import('../../accounts/claudeAccounts').ClaudeAccountTransport = {
+    request: request => this.connection.request('request', { operation: 'claudeAccounts', request }),
+  };
   private emit() {
     const { selected, ready, historyOffline, selectedArchived } = this.state;
     if (ready && selected && !historyOffline && this.loadedThreadId === selected.id) {
@@ -216,7 +246,8 @@ export class ChatController {
     }
     for (const listener of this.listeners) listener();
   }
-  private update(patch: Partial<ChatState>) {
+  private update(patch: Partial<ChatState>, readErrorSource?: ReadErrorSource) {
+    if ('error' in patch) this.readErrorSource = readErrorSource;
     const previous = this.state;
     this.state = syncChatProcessing({ ...this.state, ...patch }, this.state);
     if (previous.selected?.id !== this.state.selected?.id) {
@@ -233,6 +264,8 @@ export class ChatController {
   }
   toolDetails = (target: NonNullable<import('./types').Item['detailsRef']>) =>
     this.request<{ item: import('./types').Item }>({ operation: 'toolDetails', ...target });
+  processDetails = (target: NonNullable<import('./types').Item['processRef']>) =>
+    this.request<{ items: import('./types').Item[] }>({ operation: 'processDetails', ...target });
   private syncConversationView() {
     if (!this.conversationViewsSupported || !this.transportConnected) return Promise.resolve();
     const threadId = this.state.selected?.id ?? null;
@@ -245,9 +278,13 @@ export class ChatController {
     });
     return this.viewSync;
   }
-  private failure(error: unknown) {
+  private failure(error: unknown, source?: ReadErrorSource) {
     this.stream.flush();
-    this.update({ error: error instanceof Error ? error.message : '操作未完成，请稍后重试。' });
+    this.update({ error: error instanceof Error ? error.message : '操作未完成，请稍后重试。' }, source);
+  }
+
+  private recoveredRead(source: ReadErrorSource): Partial<ChatState> {
+    return this.readErrorSource === source ? { error: '' } : {};
   }
 
   private changeMode(mode: ConnectionMode) {
@@ -435,6 +472,8 @@ export class ChatController {
       const response = await this.connection.request<unknown>('connect', chatHandshake);
       if (!this.active || generation !== this.synchronization) return;
       const approvals = chatApprovals(response);
+      this.update({ taskRecoverySupported: !!response && typeof response === 'object'
+        && 'taskRecoveryV1' in response && response.taskRecoveryV1 === true });
       this.conversationViewsSupported = !!response && typeof response === 'object'
         && 'conversationViewsV1' in response && response.conversationViewsV1 === true;
       await this.syncConversationView();
@@ -480,6 +519,7 @@ export class ChatController {
   private applyQueue(queue: QueueSnapshot) {
     if (!queue || !Number.isSafeInteger(queue.revision) || queue.revision < this.state.queue.revision
       || !queue.threads) return;
+    this.localOutbox.observe(queue);
     this.update({ queue });
   }
 
@@ -491,6 +531,10 @@ export class ChatController {
   }
 
   async queueAction(operation: QueueAction, id?: string) {
+    if (id && this.localOutbox.has(id)) {
+      if (operation === 'queueRemove') this.localOutbox.remove(id);
+      return;
+    }
     const threadId = this.state.selected?.id;
     if (!threadId || !this.state.ready || this.state.queueBusy) return;
     const generation = this.synchronization;
@@ -504,6 +548,7 @@ export class ChatController {
   }
 
   async takeQueuedMessage(id: string) {
+    if (this.localOutbox.has(id)) return this.localOutbox.remove(id);
     const threadId = this.state.selected?.id;
     if (!threadId || !this.state.ready || this.state.queueBusy || this.state.sending) return;
     const generation = this.synchronization;
@@ -596,8 +641,8 @@ export class ChatController {
       const { threads, summaries } = mergeThreadList({ before, current: this.state.threads,
         incoming: result.data, more });
       void this.offline?.updateSummaries?.(summaries, archived).catch(this.cacheFailure);
-      this.update({ threads, cursor: result.nextCursor });
-    } catch (error) { if (generation === this.listRequests.generation) this.failure(error); }
+      this.update({ threads, cursor: result.nextCursor, ...this.recoveredRead('list') });
+    } catch (error) { if (this.listRequests.accepts(generation, revision)) this.failure(error, 'list'); }
     finally {
       if (generation === this.listRequests.generation) this.update({ loading: false });
     }
@@ -616,7 +661,7 @@ export class ChatController {
     const cached = this.histories.get(thread.id);
     if (cached) this.historyPages.set(thread.id, cached.page);
     else this.historyPages.delete(thread.id);
-    this.update({ selected: cached?.thread ?? thread, draftProject: null,
+    this.update({ selected: cached?.thread ?? thread, draftProject: null, draftScope: thread.id,
       selectedArchived: this.state.archived, error: '', historyOffline: Boolean(this.offline),
       historyHasMore: this.historyPages.get(thread.id)?.hasMore ?? false, historyLoad: undefined });
     if (this.offline && !this.state.ready) await this.readOffline(false);
@@ -660,13 +705,13 @@ export class ChatController {
         this.loadedThreadId = selected.id;
         if (result.page) this.historyPages.set(selected.id, result.page);
         this.update({ selected: mergeHistory(result.thread, this.state.selected, selected, this.state.historyOffline),
-          error: '', historyOffline: false,
+          ...this.recoveredRead('history'), historyOffline: false,
           historyHasMore: result.page.hasMore,
           ...(older && { historyLoad: historyLoadResult(selected, result.thread, startedAt) }) });
         this.rememberHistory();
         this.markViewed();
       }
-    } catch (error) { if (generation === this.readGeneration) this.failure(error); }
+    } catch (error) { if (generation === this.readGeneration) this.failure(error, 'history'); }
     finally {
       if (generation === this.readGeneration) {
         this.refreshThreadId = null;
@@ -730,6 +775,7 @@ export class ChatController {
     this.refreshThreadId = null;
     this.loadedThreadId = null;
     this.update({ selected: null, draftProject: project ? { cwd: project.cwd, label: project.label } : null,
+      draftScope: `draft:${this.selectionGeneration}`,
       selectedArchived: false, error: '', historyHasMore: false, historyLoading: false, historyLoadingMore: false });
     void this.flushCache();
     if (!this.offline || this.transportConnected) void this.composer.select(inherit);
@@ -740,37 +786,19 @@ export class ChatController {
     if (this.state.desktopOnly) { this.update({ error: '请先登录电脑并打开聊天，再发送消息。' }); return false; }
     if (this.state.threadActionBusy || this.state.workspaceBusy) return false;
     if (input.goalMode) return this.goals.start(input);
+    const prepared = this.prepareMessage(input);
+    if (!prepared) return false;
+    const { message, selection } = prepared;
     const images = input.images ?? [];
-    if (this.state.selectedArchived) { this.update({ error: '请先恢复聊天，再发送消息。' }); return false; }
-    if (this.state.sending || this.state.settingsBusy || (this.state.compacting
-      && this.state.compacting === this.state.selected?.id)
-      || (!input.text.trim() && !images.length && !input.skills?.length && !input.attachments?.length)) return false;
-    try { validateChatImages(images); }
-    catch (error) { this.failure(error); return false; }
-    if (!this.state.ready) { this.update({ error: '正在连接电脑，请稍候再发送。' }); return false; }
     const generation = this.synchronization;
-    const selection = { ...this.state.settings, model: input.model ?? this.state.settings.model,
-      effort: input.effort ?? this.state.settings.effort, access: input.access };
-    if (modelSelectionError(this.state.models, selection)) return false;
-    const message = { ...input, ...(selection.model ? { model: selection.model } : {}),
-      ...(selection.effort ? { effort: selection.effort } : {}) };
     this.update({ sending: true, error: '',
       upload: hasUpload(input) ? { phase: 'preparing', percent: 0 } : undefined });
     try {
       let thread = this.state.selected;
       const created = !thread;
       if (!thread) {
-        const result = await this.request<{ thread: Thread }>({ operation: 'start', model: selection.model || undefined,
-          access: input.access, cwd: this.state.draftProject?.cwd });
-        thread = result.thread;
-        this.threadList.upsert(thread, false);
-        this.listRequests.reset();
-        const cached = this.threadList.peek({ archived: false, search: '' });
-        const threads = cached?.data ?? (this.state.archived || this.state.search ? [] : this.state.threads);
-        this.update({ selected: thread, draftProject: null, selectedArchived: false,
-          threads: [thread, ...threads.filter((entry) => entry.id !== result.thread.id)],
-          archived: false, search: '', cursor: cached?.nextCursor ?? null, loading: false, listRefreshing: false });
-        await this.composer.created(thread.id, selection);
+        thread = await this.createMessageThread({ selection, cwd: this.state.draftProject?.cwd,
+          selectionGeneration: this.selectionGeneration, synchronization: generation });
       }
       this.ensureCurrent(generation);
       if (!created) {
@@ -784,6 +812,82 @@ export class ChatController {
       return true;
     } catch (error) { this.failure(error); return false; }
     finally { this.update({ sending: false, upload: undefined }); }
+  }
+
+  /** Composer acceptance is local; network completion must not hold its input or send button. */
+  async enqueueMessage(input: SendInput) {
+    if (input.goalMode) return this.send(input);
+    const prepared = this.prepareMessage(input);
+    if (!prepared) return false;
+    this.update({ error: '' });
+    const accepted = this.localOutbox.enqueue({ scope: this.state.draftScope ?? this.state.selected?.id ?? '',
+      thread: this.state.selected, cwd: this.state.draftProject?.cwd,
+      selectionGeneration: this.selectionGeneration, synchronization: this.synchronization },
+    prepared.message, prepared.selection);
+    if (!accepted) this.failure(new Error(uiText('client.conversation.theMessageQueueIsFullWaitForMessagesToSend')));
+    return accepted;
+  }
+
+  private async deliverLocalMessage({ target, input, settings, id }: OutboxMessage) {
+    this.ensureCurrent(target.synchronization);
+    const created = !target.thread;
+    if (!target.thread) {
+      target.thread = await this.createMessageThread({ selection: settings, cwd: target.cwd,
+        selectionGeneration: target.selectionGeneration, synchronization: target.synchronization,
+        created: thread => { target.thread = thread; } });
+    }
+    this.ensureCurrent(target.synchronization);
+    const thread = this.state.selected?.id === target.thread.id ? this.state.selected : target.thread;
+    const message = { ...input, images: input.images ?? [], clientId: id };
+    if (created) await this.request({ operation: 'send', threadId: thread.id, ...message });
+    else {
+      const queue = await this.queueConnection.enqueue(thread, message);
+      if (queue && target.synchronization === this.synchronization) this.applyQueue(queue);
+    }
+    if (target.synchronization === this.synchronization && this.state.selected?.id === thread.id) {
+      void this.refreshSelected();
+    }
+  }
+
+  private async createMessageThread({ selection, cwd, selectionGeneration, synchronization, created }: {
+    selection: ComposerSettings; cwd?: string; selectionGeneration: number; synchronization: number;
+    created?: (thread: Thread) => void;
+  }) {
+    const { thread } = await this.request<{ thread: Thread }>({ operation: 'start',
+      model: selection.model || undefined, access: selection.access, cwd });
+    created?.(thread);
+    this.ensureCurrent(synchronization);
+    this.threadList.upsert(thread, false);
+    if (this.selectionGeneration === selectionGeneration) {
+      this.listRequests.reset();
+      const cached = this.threadList.peek({ archived: false, search: '' });
+      const threads = cached?.data ?? (this.state.archived || this.state.search ? [] : this.state.threads);
+      this.update({ selected: thread, draftProject: null, selectedArchived: false,
+        draftScope: this.state.draftScope ?? '',
+        threads: [thread, ...threads.filter(entry => entry.id !== thread.id)],
+        archived: false, search: '', cursor: cached?.nextCursor ?? null, loading: false, listRefreshing: false });
+    }
+    await this.composer.created(thread.id, selection);
+    return thread;
+  }
+
+  private prepareMessage(input: SendInput) {
+    if (this.state.desktopOnly) { this.update({ error: '请先登录电脑并打开聊天，再发送消息。' }); return false; }
+    if (this.state.threadActionBusy || this.state.workspaceBusy) return false;
+    const images = input.images ?? [];
+    if (this.state.selectedArchived) { this.update({ error: '请先恢复聊天，再发送消息。' }); return false; }
+    if (this.state.sending || this.state.settingsBusy || (this.state.compacting
+      && this.state.compacting === this.state.selected?.id)
+      || (!input.text.trim() && !images.length && !input.skills?.length && !input.attachments?.length)) return false;
+    try { validateChatImages(images); }
+    catch (error) { this.failure(error); return false; }
+    if (!this.state.ready) { this.update({ error: '正在连接电脑，请稍候再发送。' }); return false; }
+    const selection = { ...this.state.settings, model: input.model ?? this.state.settings.model,
+      effort: input.effort ?? this.state.settings.effort, access: input.access };
+    if (modelSelectionError(this.state.models, selection)) return false;
+    const message = { ...input, ...(selection.model ? { model: selection.model } : {}),
+      ...(selection.effort ? { effort: selection.effort } : {}) };
+    return { message, selection };
   }
 
   answerAsyncQuestion = (item: import('./types').Item, answers: string[]) => this.asyncAnswers.submit(item, answers);
@@ -815,7 +919,8 @@ export class ChatController {
   };
 
   files: import('../fileDownload').FileClient = {
-    open: (threadId, path) => this.connection.request('request', { operation: 'fileOpen', threadId, path }),
+    open: (threadId, path, options) => this.connection.request('request', { operation: 'fileOpen', threadId, path,
+      ...(options?.preview ? { preview: options.preview } : {}) }),
     read: (request) => this.connection.request('request', { operation: 'fileRead', ...request }),
     close: (threadId, id) => this.connection.request('request', { operation: 'fileClose', threadId, id }),
   };

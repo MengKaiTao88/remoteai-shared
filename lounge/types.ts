@@ -4,6 +4,7 @@ import type { LoungeHistoryStore } from './archive';
 import { parseReply, type LoungeReply } from './reply';
 import { parseAccount, type LoungeContact } from './contacts';
 import { parseDelivery, type LoungeDelivery } from './delivery';
+import { parseGroupReceipt } from './groupReceipts';
 
 export const MAX_TEXT = 4000;
 export const MAX_IMAGES = 3;
@@ -16,10 +17,14 @@ export interface LoungeAccount {
   id: string; account: string; avatar?: string; nickname?: string;
   /** Server-confirmed lounge role, retained with messages for offline history. */
   moderator?: boolean;
+  /** Versions reported by this account's connected clients; older clients may omit them. */
+  clientVersions?: string[];
+  clients?: import('./clientVersion').LoungeClientInfo[];
   /** Private label for the current account; presentation/cache only, never transmitted to other users. */
   remark?: string;
 }
 export interface LoungeMessage {
+  groupReceipt?: string;
   attachments?: LoungeAttachment[];
   type: 'message'; id: string; sender: LoungeAccount; text: string; images: string[]; sentAt: string;
   reply?: LoungeReply;
@@ -35,6 +40,8 @@ export interface LoungeDraft {
 }
 export interface LoungePolicy { moderator: boolean; mutedUntil: string | null }
 export interface LoungeSession {
+  clientVersion?: string;
+  clientPlatform?: import('./clientVersion').LoungeClientPlatform;
   attachmentImages?: import('./attachmentCache').AttachmentImageStore;
   sync?: import('./syncConnection').LoungeSyncTransport;
   baseUrl: string;
@@ -45,6 +52,8 @@ export interface LoungeSession {
   history?: LoungeHistoryStore;
 }
 export interface LoungeSnapshot {
+  deletedConversations?: Record<string, number>;
+  groupReadsAvailable?: boolean;
   attachmentsAvailable?: boolean;
   status: 'signed-out' | 'connecting' | 'connected';
   messages: LoungeMessage[];
@@ -92,6 +101,7 @@ export function parseMessage(value: unknown): LoungeMessage | undefined {
   const sender = parseAccount(item.sender);
   if (!sender) return;
   return { ...item, sender, images, attachments: attachments.length ? attachments : undefined,
+    groupReceipt: !recipient && sender.moderator === true ? parseGroupReceipt(item.groupReceipt) : undefined,
     recipient, reply: parseReply(item.reply),
     receipts: item.receipts === true || undefined, delivery: parseDelivery(item.delivery),
     conversation: typeof item.conversation === 'string' ? item.conversation : undefined } as LoungeMessage;

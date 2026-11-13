@@ -1,7 +1,7 @@
 import { cloneElement, useEffect, useLayoutEffect, useRef, useState,
   type CSSProperties, type HTMLAttributes, type ReactElement } from 'react';
 import { createPortal } from 'react-dom';
-import { Ban, Copy, MessageCircle, Quote } from 'lucide-react';
+import { Ban, Copy, MessageCircle, Quote, UserRound } from 'lucide-react';
 import { displayText as t } from '../localization/messages';
 import { useThreadLongPress } from '../chat/useThreadLongPress';
 import { messageMenuActions } from './messageMenuActions';
@@ -9,7 +9,7 @@ import { MESSAGE_MENU_PADDING, messageMenuPosition, messageMenuSize, type MenuAn
 import type { LoungeMessageMenuActions } from './LoungeMessageMenu';
 import './mobileMessageMenu.css';
 
-const icons = { copy: Copy, reply: Quote, direct: MessageCircle, block: Ban };
+const icons = { copy: Copy, reply: Quote, direct: MessageCircle, block: Ban, profile: UserRound };
 type ActionKey = keyof typeof icons;
 type Props = LoungeMessageMenuActions & {
   children: ReactElement<HTMLAttributes<HTMLElement>>; select: (key: ActionKey) => void;

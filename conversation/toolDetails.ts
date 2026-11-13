@@ -1,17 +1,18 @@
 import type { GuiEvent, Item, Thread, Turn } from './types';
+import { commandPreview } from '../chat/commandPreview';
+import { activityPreview } from '../chat/activityPreview';
 
 const DEFERRED_TYPES = new Set(['commandExecution', 'mcpToolCall', 'dynamicToolCall', 'functionCallOutput']);
-const PREVIEW_CHARS = 160;
 
 /** Also used at the remote boundary when a legacy viewer requires the host's full event stream. */
 export function summarizeTool(item: Item, threadId: string, turnId: string): Item {
   if (!DEFERRED_TYPES.has(item.type)) return item;
   const { id, type, status, exitCode, durationMs, tool, server, name } = item;
   const action = item.commandActions?.find(action => action.type !== 'unknown');
-  const commandActions = action ? [{ type: action.type, name: action.name?.slice(0, PREVIEW_CHARS),
-    query: action.query?.slice(0, PREVIEW_CHARS), path: action.path?.slice(0, PREVIEW_CHARS) }] : undefined;
+  const commandActions = action ? [{ type: action.type, name: action.name && activityPreview(action.name),
+    query: action.query && activityPreview(action.query), path: action.path && activityPreview(action.path) }] : undefined;
   return { id, type, status, exitCode, durationMs, tool, server, name,
-    commandPreview: (item.commandPreview ?? item.command)?.slice(0, PREVIEW_CHARS),
+    commandPreview: activityPreview(commandPreview(item.commandPreview ?? item.command ?? '')),
     commandActions, detailsRef: { threadId, turnId, itemId: id } };
 }
 

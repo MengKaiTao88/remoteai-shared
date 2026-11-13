@@ -1,4 +1,4 @@
-import type { GitChange } from './gitTypes';
+import type { GitChange, GitRepositoryEntry } from './gitTypes';
 
 export const GIT_AREAS = [
   { id: 'conflict', label: "client.git.conflict", color: '#bf3945', background: '#fff0f1' },
@@ -16,24 +16,30 @@ export function fileArea(file: GitChange): GitArea['id'] {
 }
 export interface GitFileNode {
   path: string; name: string; files: GitChange[]; children: GitFileNode[]; file?: GitChange;
+  repository?: GitRepositoryEntry;
 }
-export function fileTree(files: GitChange[]): GitFileNode[] {
+export function fileTree(files: GitChange[], repositories: GitRepositoryEntry[] = []): GitFileNode[] {
   const root: GitFileNode = { path: '', name: '', files: [], children: [] };
+  const nodes = new Map<string, GitFileNode>();
+  const repositoryByPath = new Map(repositories.map(entry => [entry.path, entry]));
   for (const file of files) {
     let parent = root;
     const parts = file.path.split('/');
     parts.forEach((name, index) => {
-      const path = parts.slice(0, index + 1).join('/');
-      let node = parent.children.find(node => node.path === path);
+      const path = parent.path ? `${parent.path}/${name}` : name;
+      let node = nodes.get(path);
       if (!node) {
-        node = { path, name, files: [], children: [], file: index === parts.length - 1 ? file : undefined };
+        node = { path, name, files: [], children: [], repository: repositoryByPath.get(path),
+          file: index === parts.length - 1 ? file : undefined };
         parent.children.push(node);
+        nodes.set(path, node);
       }
+      if (index === parts.length - 1) node.file = file;
       node.files.push(file); parent = node;
     });
   }
   const sort = (nodes: GitFileNode[]): GitFileNode[] => nodes.sort((a, b) =>
-    Number(!!a.file) - Number(!!b.file) || a.name.localeCompare(b.name)).map(node =>
+    Number(!!a.file && !a.repository && !a.children.length) - Number(!!b.file && !b.repository && !b.children.length) || a.name.localeCompare(b.name)).map(node =>
     ({ ...node, children: sort(node.children) }));
   return sort(root.children);
 }

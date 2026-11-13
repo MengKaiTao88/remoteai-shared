@@ -28,12 +28,12 @@ export function ChatSidebar({ desktop, open, onClose, children, customHeading = 
   </aside>;
   if (desktop) return <ResizableThreadSidebar className="chat-sidebar chat-sidebar-resizable"
     layoutSelector=".chat-diff-layout, .chat-page" label={t("client.chat.chatList")} resizeLabel={t("client.chat.resizeChatList")}>
-    <header className="chat-sidebar-heading"><strong>{t("client.app.chat")}</strong>{headingExtra}</header>
+    <header className="chat-sidebar-heading"><strong>{t("client.agentHub.title")}</strong>{headingExtra}</header>
     {children}
   </ResizableThreadSidebar>;
   return <Drawer open={motion?.visible ?? open} placement="left" width="min(360px, 88vw)"
     rootClassName={`chat-drawer ${motion?.rootClassName ?? ''}`} rootStyle={motion?.rootStyle}
-    title={<div className="chat-drawer-heading"><strong>{t("client.app.chat")}</strong>{headingExtra}</div>}
+    title={<div className="chat-drawer-heading"><strong>{t("client.agentHub.title")}</strong>{headingExtra}</div>}
     destroyOnClose onClose={onClose} closeIcon={<X size={20} aria-label={t("client.chat.collapseChatList")} />}>
     {children}
   </Drawer>;

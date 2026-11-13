@@ -27,7 +27,9 @@ export function DownloadCard({ task, busy, connected, action, open, share, remov
   const preparation = task.status === 'preparing' ? task.preparation : undefined;
   const downloadPercent = task.size ? Math.round(task.received / task.size * 100) : 0;
   const percent = preparation ? archivePercent(preparation) : completed ? 100 : downloadPercent;
-  const status = preparation ? archiveStatus(preparation) : STATUS[task.status];
+  const status = task.sync && task.status === 'verifying' ? 'client.conversationSync.importing'
+    : task.sync && task.status === 'completed' ? 'client.conversationSync.imported'
+    : preparation ? archiveStatus(preparation) : STATUS[task.status];
   const detail = preparation ? text("client.downloads.compressedFiles", {
     done: preparation.completedFiles, total: preparation.totalFiles,
   }) : `${formatBytes(task.received)} / ${formatBytes(task.size)}`;
@@ -53,13 +55,13 @@ export function DownloadCard({ task, busy, connected, action, open, share, remov
     {!connected && !completed && <p className="download-notice">{text(task.source.attachment
       ? 'client.lounge.fileUnavailable' : 'client.downloads.reconnectToTheOriginalComputerToResume')}</p>}
     <div className="download-actions">
-      {completed && <button type="button" className="download-button" onClick={open}
+      {completed && !task.sync && <button type="button" className="download-button" onClick={open}
         disabled={busy || task.status === 'saving'}><ExternalLink size={17} />{text("client.portForwarding.open")}</button>}
-      {completed && share && canShareDownload(task) && <button type="button" className="download-button"
+      {completed && !task.sync && share && canShareDownload(task) && <button type="button" className="download-button"
         onClick={share} disabled={busy || task.status === 'saving'}><Share2 size={17} />{text("client.downloads.share")}</button>}
-      <button type="button" className="download-button" onClick={action}
+      {!(completed && task.sync) && <button type="button" className="download-button" onClick={action}
         disabled={busy || task.status === 'saving' || (!running && !completed && !connected)}>
-        <Icon size={17} />{text(label)}</button>
+        <Icon size={17} />{text(label)}</button>}
       <button type="button" className="download-button download-danger" disabled={busy} onClick={remove}>
         <Trash2 size={17} />{text("client.projectBrowser.deleted")}</button>
     </div>

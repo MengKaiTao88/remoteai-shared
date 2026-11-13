@@ -5,16 +5,17 @@ import { sshParent } from '../terminal/useSshFiles';
 import { checkPreviewSize, previewMimeType, type PreviewLoader } from './kinds';
 
 export function sshPreviewLoader(api: SshApi, id: string): PreviewLoader {
-  return async (path, { signal, progress }) => {
+  const load: PreviewLoader = async (path, { signal, progress }) => {
     signal.throwIfAborted();
     const directory = await api.files(id, { type: 'list', path: sshParent(path) });
     const file = directory.type === 'list' && directory.entries.find(entry => entry.path === path);
     if (!file || file.directory) throw new Error('client.filePreview.unavailable');
-    checkPreviewSize(file.size);
+    checkPreviewSize(file.size, path, api.previewMode);
     const parts: Uint8Array[] = [];
     progress(0, file.size);
     for (let offset = 0; offset < file.size; offset += PROJECT_FILE_CHUNK_BYTES) {
       signal.throwIfAborted();
+      checkPreviewSize(file.size, path, api.previewMode);
       const length = Math.min(PROJECT_FILE_CHUNK_BYTES, file.size - offset);
       const reply = await api.files(id, { type: 'readChunk', path, offset, length });
       signal.throwIfAborted();
@@ -26,4 +27,6 @@ export function sshPreviewLoader(api: SshApi, id: string): PreviewLoader {
     }
     return new Blob(parts, { type: previewMimeType(path) });
   };
+  load.mode = api.previewMode;
+  return load;
 }

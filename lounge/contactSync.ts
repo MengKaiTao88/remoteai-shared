@@ -13,6 +13,7 @@ interface ContactSyncOptions {
   profile: (user: LoungeAccount) => LoungeAccount;
   send: (frame: Record<string, unknown>) => boolean;
   account?: string;
+  deleted?: (peer: string) => boolean;
 }
 
 /** Owns contact merging and paged cloud restoration; chat content remains in the device archive. */
@@ -115,6 +116,7 @@ export class LoungeContactSync {
     const changed = new Set<string>();
     for (const user of users) {
       if (user.id === state.user?.id || user.account === this.options.account) continue;
+      if (this.options.deleted?.(user.id)) continue;
       const contact = { user: this.options.profile(user), direct: true };
       if (sameContact(contacts.find(value => value.user.id === user.id), contact)) continue;
       contacts = mergeContact(contacts, contact); changed.add(user.id);
@@ -130,6 +132,10 @@ function sameContact(previous: LoungeContact | undefined, contact: LoungeContact
     && (!contact.user.avatar || previous.user.avatar === contact.user.avatar)
     && (contact.user.nickname === undefined || previous.user.nickname === contact.user.nickname)
     && (contact.user.remark === undefined || previous.user.remark === contact.user.remark)
+    && (contact.user.clientVersions === undefined
+      || JSON.stringify(previous.user.clientVersions) === JSON.stringify(contact.user.clientVersions))
+    && (contact.user.clients === undefined
+      || JSON.stringify(previous.user.clients) === JSON.stringify(contact.user.clients))
     && (contact.lastMessageAt ?? 0) <= (previous.lastMessageAt ?? 0)
     && (contact.pinned === undefined || previous.pinned === contact.pinned);
 }

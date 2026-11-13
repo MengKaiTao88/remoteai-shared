@@ -1,0 +1,9 @@
+@import (reference) './threadScrollbar.less';
+
+.cs-activity-list {
+  .thread-scrollbar(var(--gui-muted, var(--app-muted, #7b8781)));
+  box-sizing: border-box; overflow-x: hidden; overflow-y: auto;
+  overscroll-behavior-y: contain; scrollbar-gutter: stable;
+}
+.cs-activity-list > * { flex-shrink: 0; min-width: 0; }
+.cs-activity-list:focus-visible { outline: 2px solid var(--green, var(--app-accent, #168348)); outline-offset: 2px; }

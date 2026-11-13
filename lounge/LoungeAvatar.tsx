@@ -6,9 +6,10 @@ import { LoungeAvatarMenu } from './LoungeAvatarMenu';
 import { useThreadLongPress } from '../chat/useThreadLongPress';
 import './avatar.css';
 
-export function LoungeAvatar({ user, onDirect, onProfile, onMention, onLongPress }: {
+export function LoungeAvatar({ user, onDirect, onProfile, onMention, onLongPress, onMenuProfile }: {
   user: LoungeAccount; onDirect?: () => void; onProfile?: () => void; onMention?: () => void;
   onLongPress?: () => void;
+  onMenuProfile?: () => void;
 }) {
   const [failedSource, setFailedSource] = useState<string>();
   const gestures = useThreadLongPress(() => onLongPress?.(), { enabled: !!onLongPress });
@@ -24,5 +25,6 @@ export function LoungeAvatar({ user, onDirect, onProfile, onMention, onLongPress
     aria-label={t(onProfile ? 'client.lounge.viewProfile' : 'client.lounge.directWith', {
       account: accountName(user) })}>{content}</button>
     : <span className="lounge-avatar" aria-hidden>{content}</span>;
-  return onMention ? <LoungeAvatarMenu user={user} mention={onMention}>{avatar}</LoungeAvatarMenu> : avatar;
+  return onMention ? <LoungeAvatarMenu user={user} mention={onMention} profile={onMenuProfile ?? onProfile}>
+    {avatar}</LoungeAvatarMenu> : avatar;
 }

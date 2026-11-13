@@ -1,9 +1,10 @@
 import { validateChatImages } from '../attachments';
 import { pickChatImages } from './pickChatImages';
+import type { ConnectionMode } from '../protocol';
 
-export async function prepareImageEdit(source: string) {
+export async function prepareImageEdit(source: string, mode?: ConnectionMode) {
   if (source.startsWith('data:')) {
-    try { validateChatImages([source]); return source; }
+    try { validateChatImages([source], mode); return source; }
     catch { /* Reuse attachment compression when the original exceeds the send limit. */ }
   }
   if (!/^(data:image\/|blob:|https?:\/\/)/i.test(source)) throw new Error('Unsupported image');

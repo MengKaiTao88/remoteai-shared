@@ -54,9 +54,18 @@
   display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px;
   margin: 0 auto; padding-bottom: 24px; color: var(--ink); overflow-wrap: anywhere;
 }
-.connection-health .health-ok { --health-color: #21883f; --health-background: #edf7f0; }
-.connection-health .health-waiting { --health-color: #946617; --health-background: #fff7e6; }
-.connection-health .health-blocked { --health-color: #bf4e46; --health-background: #fff0ee; }
+.connection-health .health-ok {
+  --health-color: color-mix(in srgb, var(--app-success, #21883f) 50%, var(--ink));
+  --health-background: var(--app-successBg, #edf7f0);
+}
+.connection-health .health-waiting {
+  --health-color: color-mix(in srgb, var(--app-warning, #946617) 50%, var(--ink));
+  --health-background: var(--app-warningBg, #fff7e6);
+}
+.connection-health .health-blocked {
+  --health-color: color-mix(in srgb, var(--app-danger, #bf4e46) 50%, var(--ink));
+  --health-background: var(--app-dangerBg, #fff0ee);
+}
 .connection-health-summary {
   display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 16px;
   color: var(--health-color); background: var(--health-background);
@@ -64,7 +73,7 @@
 .connection-health-summary-icon,
 .connection-health-badge-icon {
   display: flex; flex-shrink: 0; align-items: center; justify-content: center;
-  border-radius: 50%; color: #fff; background: var(--health-color);
+  border-radius: 50%; color: var(--app-surface, #fff); background: var(--health-color);
 }
 .connection-health-summary-icon { width: 34px; height: 34px; }
 .connection-health-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; gap: 4px; }

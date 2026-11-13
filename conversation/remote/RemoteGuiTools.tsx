@@ -1,6 +1,6 @@
 import { uiText } from "../../localization/uiText";
 import { remoteErrorText } from "../../localization/errors";
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, Button, Popover, Tooltip } from 'antd';
 import { PanelBottom, RefreshCw } from 'lucide-react';
 import type { ChatState } from '../../remote-chat/client/types';
@@ -11,13 +11,18 @@ import { CliUpdateIcon } from '../CliUpdateIcon';
 import { GuiChatSettingsButton } from '../GuiChatSettingsButton';
 import { PanelToggleButton } from '../../chat/PanelToggleButton';
 import type { useRemoteCliInstaller } from './useRemoteCliInstaller';
+import { useCliGui } from '../../cli-gui/context';
+import { CliRuntimeTools } from '../../cli-gui/CliRuntimeTools';
 
-export function RemoteGuiTools({ controller, state, installer, terminal, active }: {
+export function RemoteGuiTools({ controller, state, installer, terminal, active, settings }: {
   controller: ChatController; state: ChatState; installer: ReturnType<typeof useRemoteCliInstaller>;
   terminal?: TerminalPanelState & { error?: string; busy?: boolean };
   active: boolean;
+  settings?: ReactNode;
 }) {
   const connected = state.mode === 'direct' || state.mode === 'relay';
+  const cli = useCliGui();
+  const external = Boolean(cli && cli.state.engine !== 'codex');
   const [reconnecting, setReconnecting] = useState(false);
   const [error, setError] = useState('');
   const running = state.sending || Boolean(state.selected?.turns?.some(turn => turn.status === 'inProgress'));
@@ -31,8 +36,8 @@ export function RemoteGuiTools({ controller, state, installer, terminal, active 
     finally { setReconnecting(false); }
   };
   return <div className="gui-remote-tools">
-    <GuiChatSettingsButton active={active} />
-    <Tooltip title={uiText("client.workspaceActions.reconnectRemoteCodex")} styles={{ root: { maxWidth: 400 } }}>
+    {settings === undefined ? <GuiChatSettingsButton active={active} /> : settings}
+    {external ? <CliRuntimeTools refreshModels={controller.refreshModels} /> : <><Tooltip title={uiText("client.workspaceActions.reconnectRemoteCodex")} styles={{ root: { maxWidth: 400 } }}>
       <Button type="text" className="gui-remote-secondary-tool"
         icon={<RefreshCw size={16} />} aria-label={uiText("client.workspaceActions.reconnectRemoteCodex")}
         loading={reconnecting || state.connecting} disabled={running || installer.installing}
@@ -45,7 +50,7 @@ export function RemoteGuiTools({ controller, state, installer, terminal, active 
       <Button type="text" className="gui-remote-secondary-tool"
         icon={<CliUpdateIcon version={installer.version} release={installer.release} />}
         aria-label={uiText("client.workspaceActions.remoteCodexCliUpdates")} />
-    </Popover>
+    </Popover></>}
     {terminal && <PanelToggleButton icon={<PanelBottom size={16} />} label={terminalLabel}
       expanded={terminal.open} active={terminal.tabs.length > 0}
       disabled={terminal.busy || (!connected && !terminal.open)}

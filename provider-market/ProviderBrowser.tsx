@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Globe, Maximize2, Minimize2, Plus, RotateCw, X } from 'lucide-react';
 import { marketText, type MarketText } from './i18n';
@@ -13,6 +13,7 @@ export interface BrowserSurfaceProps {
   tab: BrowserTab; active: boolean; command: { sequence: number; action: BrowserAction } | null;
   onNavigate: (url: string) => void; t: MarketText;
   onPopup: (url: string) => void;
+  onLoadingChange?: (loading: boolean) => void;
   hideForModal?: boolean;
 }
 export interface BrowserWindowProps {
@@ -25,7 +26,8 @@ export interface BrowserWindowProps {
   commands: Record<string, BrowserSurfaceProps['command']>; Surface: ComponentType<BrowserSurfaceProps>;
 }
 
-function BrowserToolbar({ tab, fullscreen, toggleFullscreen, navigate, action, t, actions }: {
+function BrowserToolbar({ tab, loading, fullscreen, toggleFullscreen, navigate, action, t, actions }: {
+  loading: boolean;
   tab?: BrowserTab; fullscreen: boolean; toggleFullscreen: () => void;
   navigate: (url: string) => void; action: (action: BrowserAction) => void; t: MarketText; actions?: ReactNode;
 }) {
@@ -37,8 +39,10 @@ function BrowserToolbar({ tab, fullscreen, toggleFullscreen, navigate, action, t
       disabled={!tab?.url} onClick={() => action('back')}><ArrowLeft size={17} /></button>
     <button aria-label={t('market.browserForward')} title={t('market.browserForward')}
       disabled={!tab?.url} onClick={() => action('forward')}><ArrowRight size={17} /></button>
-    <button aria-label={t('market.browserReload')} title={t('market.browserReload')}
-      disabled={!tab?.url} onClick={() => action('reload')}><RotateCw size={17} /></button>
+    <button aria-label={t(loading ? 'market.cancel' : 'market.browserReload')}
+      title={t(loading ? 'market.cancel' : 'market.browserReload')}
+      disabled={!tab?.url} onClick={() => action(loading ? 'stop' : 'reload')}>
+      {loading ? <X size={17} /> : <RotateCw size={17} />}</button>
     <form onSubmit={(event) => {
       event.preventDefault();
       if (tab?.url.startsWith('file:') && address.trim() === tab.url) {
@@ -71,6 +75,21 @@ export function BrowserContents(props: BrowserWindowProps & {
   const t = marketText(props.language);
   const tab = tabs.find((entry) => entry.id === activeId);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loadingTabs, setLoadingTabs] = useState<ReadonlySet<string>>(() => new Set());
+  const loadingChanged = useCallback((id: string, loading: boolean) => {
+    setLoadingTabs(current => {
+      if (current.has(id) === loading) return current;
+      const next = new Set(current);
+      if (loading) next.add(id); else next.delete(id);
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    setLoadingTabs(current => {
+      const next = new Set([...current].filter(id => tabs.some(entry => entry.id === id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [tabs]);
   return <>
     <div className="pm-browser-titlebar">{props.history}
     <BrowserTabs tabs={tabs} activeId={activeId} visible={open} t={t}
@@ -79,14 +98,16 @@ export function BrowserContents(props: BrowserWindowProps & {
       onClick={props.onNewTab}><Plus size={17} /></button>
     {!props.embedded && <button className="pm-browser-close" aria-label={t('market.close')} title={t('market.close')}
       onClick={props.onClose}><X size={19} /></button>}</div>
-    <BrowserToolbar tab={tab} fullscreen={props.fullscreen} toggleFullscreen={props.toggleFullscreen}
+    <BrowserToolbar tab={tab} loading={Boolean(tab && loadingTabs.has(tab.id))}
+      fullscreen={props.fullscreen} toggleFullscreen={props.toggleFullscreen}
       navigate={(url) => { if (tab) props.onNavigate(tab.id, url); }}
       action={(action) => { if (tab) props.onAction(tab.id, action); }} t={t} actions={props.actions} />
     <div className="pm-browser-pages">{tabs.map((entry) => <div key={entry.id} id={`page-${entry.id}`}
       role="tabpanel" className="pm-browser-page" hidden={entry.id !== activeId}>
       <Surface tab={entry} active={open && entry.id === activeId && !menuOpen} command={commands[entry.id] ?? null}
         hideForModal={props.embedded} onNavigate={(url) => (props.onPageNavigate ?? props.onNavigate)(entry.id, url)}
-        onPopup={(url) => props.onPopup(entry.id, url)} t={t} />
+        onPopup={(url) => props.onPopup(entry.id, url)}
+        onLoadingChange={loading => loadingChanged(entry.id, loading)} t={t} />
     </div>)}</div>
   </>;
 }

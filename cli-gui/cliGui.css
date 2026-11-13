@@ -1,0 +1,25 @@
+.cli-gui-engine { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0;
+  background: transparent; color: inherit; cursor: pointer; font: inherit; text-align: left; }
+.cli-gui-engine:focus-visible { outline: 2px solid var(--accent, #26976c); outline-offset: 4px; border-radius: 3px; }
+.cli-gui-disabled-engine-option { position: relative; }
+.cli-gui-disabled-engine-label { display: block; }
+/* Include the disabled row's icon and padding in the explanation's hover target. */
+.cli-gui-disabled-engine-label::before { content: ''; position: absolute; inset: 0; }
+.cli-gui-pane { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+.cli-gui-pane .chat-message-region { font-family: inherit; }
+.cli-gui-pane .ant-alert { margin: 8px 16px; }
+.cli-gui-install-region { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.cli-gui-setup [role=status] { display: inline-flex; align-items: center; gap: 8px; }
+.cli-gui-footer { padding: 8px 24px 12px; width: min(100%, 920px); align-self: center; box-sizing: border-box;
+  color: var(--muted); display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.cli-gui-install-link { display: inline-flex; align-items: center; gap: 4px; font-size: .9em; }
+.cli-gui-install-link a { display: inline-flex; align-items: center; gap: 4px; }
+.cli-gui-codex-content[hidden] { display: none !important; }
+.cli-gui-codex-content { display: contents; }
+.cli-gui-input { display: block; width: 100%; box-sizing: border-box; resize: none; border: 0;
+  border-radius: 0; color: inherit; background: transparent; font-family: inherit; }
+.cli-gui-input::placeholder { color: var(--gui-muted); opacity: 1; }
+.cli-gui-file-reference { display: flex; flex-direction: column; gap: 12px; }
+.cli-gui-file-reference p { margin: 0; }
+.cli-gui-remote-mode { display: contents; }

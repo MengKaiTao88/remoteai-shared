@@ -1,4 +1,5 @@
 @import (reference) '../chat/threadScrollbar.less';
+@import (reference) '../appearance/codexGuiBrand.less';
 
 :global(main).main {
   display: flex; flex-direction: column; padding: 0; overflow: hidden; min-height: 0;
@@ -34,10 +35,10 @@
   display: flex; flex-direction: column; gap: 8px;
   padding: 12px var(--sidebar-inline-padding) var(--sidebar-bottom-padding);
   min-height: 0; background: var(--bg, #f6f8f7); }
-.sidebarHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+.sidebarHeading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
   min-height: 24px; flex-shrink: 0; padding: 0 6px; }
 .sidebarTitle {
-  --title-gradient: linear-gradient(105deg, #087f8c 0%, #2563eb 35%, #7c3aed 65%, #c0267e 100%);
+  .codex-gui-brand();
   margin: 0; font-size: calc(var(--gui-font-size, 14px) - 1px); font-weight: 600; line-height: max(18px, 1.4em);
   white-space: nowrap;
   @supports (background-clip: text) or (-webkit-background-clip: text) {

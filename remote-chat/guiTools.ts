@@ -12,6 +12,7 @@ import type { GitRequest, GitStatus } from './gitWorkspace';
 import { PROJECT_LIST_OPERATION, PROJECT_SELECT_OPERATION, type ProjectSelection } from './projects';
 import type { ChatProject } from './client/types';
 import { CODEX_STATUS_OPERATION, type CodexServiceStatus } from '../codex-status/status';
+import { createGuiSettingsClient, GUI_SETTINGS_OPERATIONS } from './guiSettings';
 import type { GitActionRequest, GitChanges, GitCommitFile, GitCommitRequest, GitDiff, GitHistory,
   GitFileActionRequest, GitRepository, GitRevisionRequest, GitMessageRequest, GitSettings,
   GitConflict, GitResolution } from './gitTypes';
@@ -32,6 +33,7 @@ export interface RemoteCliStatus {
 }
 export const GUI_TOOL_OPERATIONS = new Set([
   RESET_PRIORITY_READ, RESET_PRIORITY_SET,
+  ...GUI_SETTINGS_OPERATIONS,
   CODEX_STATUS_OPERATION,
   'guiBrowser',
   PROJECT_LIST_OPERATION, PROJECT_SELECT_OPERATION,
@@ -65,6 +67,7 @@ export function createGuiToolsClient(request: <T>(body: object) => Promise<T>,
   };
   return {
     resetPriority: createResetPriorityClient(request),
+    settings: createGuiSettingsClient(request),
     serviceStatus: () => request<CodexServiceStatus>({ operation: CODEX_STATUS_OPERATION }),
     browser: (input: import('../browser/automation').BrowserRequest) =>
       request<import('../browser/automation').BrowserReply>({ operation: 'guiBrowser', request: input }),
@@ -94,7 +97,8 @@ export function createGuiToolsClient(request: <T>(body: object) => Promise<T>,
       generateMessage: (input: GitMessageRequest) =>
         request<{ message: string }>({ ...input, operation: 'guiGitGenerateMessage' }),
       revision: (input: GitRevisionRequest) => request<void>({ ...input, operation: 'guiGitRevision' }),
-      repository: (cwd: string) => request<GitRepository>({ operation: 'guiGitRepository', cwd }),
+      repository: (cwd: string, includeChildren?: boolean) =>
+        request<GitRepository>({ operation: 'guiGitRepository', cwd, includeChildren }),
       action: (input: GitActionRequest) => request<void>({ ...input, operation: 'guiGitAction' }),
       changes: (cwd: string) => request<GitChanges>({ operation: 'guiGitChanges', cwd }),
       diff: (cwd: string, path: string, commit?: string) =>

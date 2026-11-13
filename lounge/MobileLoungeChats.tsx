@@ -42,7 +42,7 @@ export function MobileLoungeChats({ model, controller, onBack }: {
       {rows.map((row, index) => <div key={row.id}>
         {(index === 0 || !rows[index - 1].user) && <h2 className="lounge-section-label">
           {t(row.user ? 'client.lounge.privateChats' : 'client.lounge.publicRoom')}</h2>}
-        <LoungeSwipeRow enabled={!!row.user && !!model.state.directResetAvailable && model.state.status === 'connected'}
+        <LoungeSwipeRow enabled={!!row.user}
           remove={() => model.setDeleting(row.user)}>
         <MobileLoungeChatTrigger enabled open={() => setMenu(row.id)}>
           <MobileLoungeChatRow row={row} model={model} />

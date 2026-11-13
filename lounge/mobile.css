@@ -30,9 +30,12 @@
 .lounge-heading-identity.is-private .lounge-heading-details { flex-direction: column; align-items: flex-start; }
 .lounge-heading-identity.is-private .lounge-avatar { width: 42px; height: 42px; flex-basis: 42px;
   border-radius: 15px; background: var(--lounge-blue-bg); color: var(--lounge-blue); }
-.lounge-heading-account { display: block; max-width: 100%; border: 0; padding: 0;
-  background: transparent; color: inherit; text-align: start; overflow: hidden; text-overflow: ellipsis; }
-.lounge-heading-identity.is-private h1 { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lounge-heading-account { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: .5em;
+  max-width: 100%; border: 0; padding: 0; background: transparent; color: inherit; text-align: start; }
+.lounge-heading-identity.is-private h1 { max-width: 100%; }
+.lounge-heading-account-name { min-width: 0; max-width: 100%; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.lounge-heading-account .lounge-client-version { max-width: 100%; white-space: normal; }
 .lounge-heading-identity.is-private .lounge-members-trigger { min-height: 24px; margin-left: 0; }
 .lounge-mobile-heading .lounge-members-trigger { min-width: 0; flex-shrink: 1; color: var(--lounge-muted);
   font-size: 11px; margin-left: 6px; text-align: start; }

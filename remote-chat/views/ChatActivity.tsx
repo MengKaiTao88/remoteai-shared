@@ -3,6 +3,8 @@ import { t, useLanguage } from '../../localization/browserClient';
 import { useId, useState, type ReactNode } from 'react';
 import { Brain, ChevronRight, FilePenLine, Search, SquareTerminal, Users, Wrench } from 'lucide-react';
 import { ChatToolContent } from './ChatToolContent';
+import { useToolSummary } from '../../chat/useToolSummary';
+import { isItemFinished } from '../../conversation/itemStatus';
 import type { Item } from './types';
 import { messageContent, messageLabel } from '../../chat/messageDetails';
 import { collaborationSummary, isCollaborationActivity }
@@ -26,11 +28,12 @@ function activityLabel(item: Item) {
   return [displayText(messageLabel(item)), detail, STATUS[item.status ?? '']].filter(Boolean).join(' · ');
 }
 
-export function ChatActivity({ item, onOpen, running, inline = false, onInspect, items, content }: {
+export function ChatActivity({ item: source, onOpen, running, inline = false, onInspect, items, content }: {
   item: Item; onOpen: (id: string) => void; running?: boolean;
   inline?: boolean; onInspect?: () => void; items?: Item[]; content?: () => ReactNode;
 }) {
   useLanguage();
+  const { item, onLoad } = useToolSummary(source);
   const [expanded, setExpanded] = useState(false);
   const detailsId = useId();
   const label = (items ? activityGroupLabel(items, t) : activityLabel(item))
@@ -40,7 +43,7 @@ export function ChatActivity({ item, onOpen, running, inline = false, onInspect,
   const icons = { commandExecution: SquareTerminal, fileChange: FilePenLine, reasoning: Brain, webSearch: Search };
   const Icon = isCollaborationActivity(item) ? Users : icons[item.type as keyof typeof icons] || Wrench;
   return <div className={inline ? 'chat-inline-activity' : undefined} data-status={status}>
-    <button type="button" className={`chat-activity${running ? ' is-running' : ''}`}
+    <button type="button" className={`chat-activity${running && !isItemFinished(item.status) ? ' is-running' : ''}`}
       title={label}
       aria-label={items ? t("client.mobile.viewAllActivities", { value1: label, value2: items.length }) : undefined}
       aria-expanded={inline ? expanded : undefined} aria-controls={inline && expanded ? detailsId : undefined}
@@ -54,7 +57,7 @@ export function ChatActivity({ item, onOpen, running, inline = false, onInspect,
       <ChevronRight size={15} /></button>
     {inline && expanded && <div id={detailsId}
       className={items ? 'chat-activity-list' : 'chat-inline-tool-content chat-detail-stack'}>
-      {content ? content() : <ChatToolContent item={item} />}
+      {content ? content() : <ChatToolContent item={source} onLoad={onLoad} />}
     </div>}
   </div>;
 }

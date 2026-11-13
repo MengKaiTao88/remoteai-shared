@@ -13,6 +13,8 @@ import { LoungeHistory } from './LoungeHistory';
 import { LoungePreview } from './LoungePreview';
 import { LoungeAvatarSettings } from './LoungeAvatarSettings';
 import { LoungeAvatar } from './LoungeAvatar';
+import { LoungeClientVersion } from './LoungeClientVersion';
+import { hasOnlineClientDevices } from './clientPresence';
 import { LoungeModeration } from './LoungeModeration';
 import { LoungeBlockDialog } from './LoungeBlockDialog';
 import { LoungeAbout } from './MobileLoungeSheet';
@@ -85,6 +87,7 @@ export function MobileLoungePage({ controller, onBack }: { controller: LoungeCon
 
 function MobileHeading({ model }: { model: MobileLounge }) {
   const { state, contact } = model;
+  const devicePresence = hasOnlineClientDevices(contact, state.status);
   const status = state.status !== 'connected' ? t(`client.lounge.${state.status}`)
     : contact ? t(contactStatus(contact)) : state.onlineCount !== undefined
       ? t('client.lounge.mobileOnlineCount', { count: state.onlineCount }) : t('client.lounge.membersShort');
@@ -96,12 +99,16 @@ function MobileHeading({ model }: { model: MobileLounge }) {
       <div className="lounge-heading-details">
         <h1>{contact ? <button type="button" className="lounge-heading-account"
           aria-label={t('client.lounge.viewProfile', { account: accountName(contact.user) })}
-          onClick={() => model.setProfile(contact.user)}>{accountName(contact.user)}</button>
+          aria-description={devicePresence ? t('client.lounge.userOnline') : undefined}
+          onClick={() => model.setProfile(contact.user)}>
+          <span className="lounge-heading-account-name">{accountName(contact.user)}</span>
+          <LoungeClientVersion user={contact.user} online={devicePresence} /></button>
           : t('client.lounge.title')}</h1>
-        <button type="button" className="lounge-members-trigger" onClick={() => model.setSheet('members')}>
+        {!devicePresence && <button type="button" className="lounge-members-trigger"
+          onClick={() => model.setSheet('members')}>
           <i className={state.status === 'connected' && (!contact || contact.online === true) ? 'is-online' : ''} />
           <span className={contact ? 'lounge-peer-status' : state.onlineCount !== undefined
-            ? 'lounge-online-count' : undefined}>{status}</span></button>
+            ? 'lounge-online-count' : undefined}>{status}</span></button>}
       </div>
     </div>
     <button type="button" className="lounge-chats-trigger" aria-label={t('client.lounge.chats')}

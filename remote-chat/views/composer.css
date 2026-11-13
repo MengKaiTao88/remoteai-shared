@@ -72,7 +72,13 @@
 .chat-command-menu header button { display: grid; place-items: center; border: 0; background: transparent; }
 .chat-menu-options > button { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 10px 14px;
   border: 0; background: transparent; color: var(--app-ink, #25332b); font: inherit; text-align: left; cursor: pointer; }
-.chat-menu-options > button[aria-current="true"] { background: var(--app-canvas, #e6f8f1); box-shadow: inset 3px 0 #14806f; }
+.chat-command-menu .chat-menu-options > button:hover:not(:disabled) {
+  background: var(--chat-menu-hover, var(--app-canvas, #f2f4f3));
+}
+.chat-command-menu .chat-menu-options > button[aria-current="true"] {
+  background: var(--chat-menu-selected, var(--app-accentSoft, #e6f8f1));
+  box-shadow: inset 3px 0 var(--chat-menu-accent, #14806f);
+}
 .chat-menu-options small { color: var(--app-muted, #7b8981); font-size: 12px; line-height: 1.5; font-weight: 400;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .chat-menu-options strong small { display: inline; }

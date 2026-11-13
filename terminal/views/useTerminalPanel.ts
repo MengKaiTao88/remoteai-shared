@@ -29,16 +29,18 @@ export function useTerminalPanel(cwd: string) {
     setTabs((current) => [...current, tab]); setSelected(tab.id);
   };
   const add = () => addInDirectory(cwd);
-  const remove = (id: string) => {
-    const remaining = tabs.filter((tab) => tab.id !== id);
+  const removeTabs = (ids: string[]) => {
+    const remaining = currentTabs.current.filter(tab => !ids.includes(tab.id));
+    currentTabs.current = remaining;
     setTabs(remaining);
     setError('');
-    if (selected === id) setSelected(remaining.at(-1)?.id ?? "");
+    setSelected(current => ids.includes(current) ? remaining.at(-1)?.id ?? '' : current);
     if (!remaining.length) setOpen(false);
   };
+  const remove = (id: string) => removeTabs([id]);
   const exited = (id: string) => setTabs(current => current.map(tab => tab.id === id ? { ...tab, exited: true } : tab));
   return { tabs, selected, open, error, add, adopt, projectCwd: cwd, addInDirectory,
-    remove, exited, select: setSelected, hide: () => setOpen(false),
+    remove, removeTabs, exited, select: setSelected, hide: () => setOpen(false),
     toggle: () => { if (!tabs.length) add(); else setOpen(!open); } };
 }
 

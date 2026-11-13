@@ -14,7 +14,7 @@ import './taskItems.css';
 interface WorkspaceProps {
   tasks: DownloadTask[]; owner: string; busy: boolean; error: string; text?: DownloadText;
   run: DownloadItemProps['run']; removeTasks: (ids: string[]) => void;
-  onBack?: () => void; sources?: ReactNode; allowShare?: boolean;
+  onBack?: () => void; sources?: ReactNode; allowShare?: boolean; allowReveal?: boolean;
 }
 
 const FILTER_LABELS = {
@@ -22,7 +22,7 @@ const FILTER_LABELS = {
 };
 
 export function DownloadWorkspace({ tasks, owner, busy, error, run, removeTasks,
-  text = displayText, onBack, sources, allowShare }: WorkspaceProps) {
+  text = displayText, onBack, sources, allowShare, allowReveal }: WorkspaceProps) {
   const [filter, setFilter] = useState<DownloadFilter>('all');
   const [sort, setSort] = useState<DownloadSort>('recent');
   const [query, setQuery] = useState('');
@@ -42,9 +42,9 @@ export function DownloadWorkspace({ tasks, owner, busy, error, run, removeTasks,
     });
   };
   const itemProps = (task: DownloadTask): DownloadItemProps => ({
-    task, busy, text, run, allowShare, selecting, selected: selection.selected.has(task.id),
+    task, busy, text, run, allowShare, allowReveal, selecting, selected: selection.selected.has(task.id),
     toggle: () => { setBatch(true); selection.toggle(task.id); },
-    connected: !!downloadManager.connectionForSource(task.source)?.ready,
+    connected: downloadManager.taskConnected(task),
     retryAttempt: downloadManager.retryAttempt(task.id),
   });
   const reset = () => { setFilter('all'); setQuery(''); };

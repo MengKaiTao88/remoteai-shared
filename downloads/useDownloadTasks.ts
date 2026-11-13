@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Dialog } from 'antd-mobile';
 import { t } from '../localization/browserClient';
 import { downloadManager } from './manager';
-import type { DownloadTask } from './types';
+import type { DownloadOperation, DownloadTask } from './types';
 import { DownloadOpenError, type DownloadOpener } from './openDownload';
 import { DownloadShareError } from './shareDownload';
 import { removeDownloads } from './removeDownloads';
@@ -17,6 +17,7 @@ function confirmRemove(count?: number) {
 
 export function useDownloadTasks(owner: string, options: {
   confirmRemove?: (count?: number) => Promise<boolean>; openDownload?: DownloadOpener; additionalOwner?: string;
+  revealDownload?: DownloadOpener;
 } = {}) {
   const allTasks = useSyncExternalStore(downloadManager.subscribe, downloadManager.snapshot);
   const current = useSyncExternalStore(downloadManager.subscribe, downloadManager.connection);
@@ -40,12 +41,15 @@ export function useDownloadTasks(owner: string, options: {
     } catch { setError(t('client.downloads.deleteFailed')); }
     finally { pending.current = false; setBusy(''); }
   };
-  const run = async (task: DownloadTask, operation: 'action' | 'remove' | 'open' | 'share' | 'retry' = 'action') => {
+  const run = async (task: DownloadTask, operation: DownloadOperation = 'action') => {
     if (operation === 'remove') return removeTasks([task.id], false);
     if (pending.current) return;
     pending.current = true; setBusy(task.id); setError('');
     try {
       if (operation === 'open') await downloadManager.open(task.id, options.openDownload);
+      else if (operation === 'reveal') {
+        if (options.revealDownload) await downloadManager.open(task.id, options.revealDownload);
+      }
       else if (operation === 'share') await downloadManager.share(task.id);
       else if (operation === 'retry') await downloadManager.resume(task.id);
       else if (['completed', 'ready'].includes(task.status)) await downloadManager.save(task.id);
@@ -53,7 +57,7 @@ export function useDownloadTasks(owner: string, options: {
       else await downloadManager.resume(task.id);
     } catch (cause) {
       const knownError = cause instanceof DownloadOpenError || cause instanceof DownloadShareError;
-      setError(knownError ? cause.message : operation === 'open'
+      setError(knownError ? cause.message : operation === 'open' || operation === 'reveal'
         ? '打开未完成，请重试或保存到设备后打开。' : '操作未完成，请检查浏览器存储空间后重试。');
     }
     finally { pending.current = false; setBusy(''); }

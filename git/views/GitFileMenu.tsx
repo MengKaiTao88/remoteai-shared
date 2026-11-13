@@ -17,12 +17,13 @@ export function GitFileMenu({ row, panel, connected, children }: {
       onClick: () => { void panel.openConflict(row.path); } }}>{children}</GitContextMenu>;
   const labels = gitFileMenuLabels(row.kind === 'folder');
   const deletable = deletableGitFiles(row.files);
-  const disabled = panel.busy || !connected || panel.changes?.files.some(item => item.conflict);
+  const disabled = !row.files.length || panel.busy || !connected || panel.changes?.files.some(item => item.conflict);
   return <GitContextMenu disabled={disabled} overlayClassName="git-file-context-menu"
     menu={{ items: [
       { key: 'commit', label: displayText(labels.commit),
         icon: <GitCommitHorizontal size={16} /> },
-      { key: 'rollback', label: displayText(labels.rollback), icon: <Undo2 size={16} /> },
+      { key: 'rollback', label: displayText(labels.rollback), icon: <Undo2 size={16} />,
+        disabled: row.files.some(file => file.submodule) },
       { type: 'divider' },
       { key: 'delete', label: displayText(labels.delete), icon: <Trash2 size={16} />,
         danger: true, disabled: !deletable.length },

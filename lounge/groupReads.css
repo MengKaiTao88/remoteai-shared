@@ -1,0 +1,17 @@
+.lounge-group-read-count {
+  align-self: flex-end;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.lounge-group-read-count:hover { text-decoration: underline; }
+.lounge-group-read-count:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.lounge-group-readers { max-height: min(55vh, 400px); overflow-y: auto; }
+.lounge-group-reader { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.lounge-group-reader > div { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.lounge-group-reader strong, .lounge-group-reader span { overflow-wrap: anywhere; }
+.lounge-group-reader strong { font-weight: 500; }
+.lounge-group-reader span { color: var(--lounge-muted, #8c939d); font-size: .9em; }

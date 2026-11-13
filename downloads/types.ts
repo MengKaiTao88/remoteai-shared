@@ -2,6 +2,8 @@ import type { DownloadClient, DownloadLocation } from '../remote-chat/downloads'
 import type { FileClient } from '../remote-chat/fileDownload';
 import type { ConnectionMode } from '../remote-chat/protocol';
 
+export type DownloadOperation = 'action' | 'remove' | 'open' | 'reveal' | 'share' | 'retry';
+
 export interface DownloadSource extends DownloadLocation {
   attachment?: import('../lounge/attachments').LoungeAttachment;
   owner: string; deviceId: string; deviceName: string; path: string;
@@ -21,6 +23,7 @@ export interface DownloadTask {
   verified?: boolean;
   exported?: boolean;
   preparation?: import('../remote-chat/archiveDownload').ArchiveProgress;
+  sync?: import('../conversation/sync/taskTypes').SyncDownload;
 }
 export interface DownloadConnection {
   owner: string; deviceId: string; deviceName: string; ready: boolean; mode: ConnectionMode;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type SetStateAction } from 'react';
 import type { LoungeController } from './controller';
 import type { LoungeAccount, LoungeDraft, LoungeMessage } from './types';
 import { quoteMessage, type LoungeReply } from './reply';
@@ -46,9 +46,24 @@ export function useMobileLounge(controller: LoungeController) {
     // Following new messages and offering a one-page shortcut have different thresholds.
     setShowLatest(viewportHeight > 0 && offset >= viewportHeight);
   }, [conversation, navigation.focus]);
-  const change = (draft: LoungeDraft) => setDrafts(current => ({ ...current, [conversation]: draft }));
+  const change = (update: SetStateAction<LoungeDraft>) => setDrafts(current => ({ ...current,
+    [conversation]: typeof update === 'function' ? update(current[conversation] ?? EMPTY_DRAFT) : update }));
   const draft = drafts[conversation] ?? EMPTY_DRAFT;
   const contact = state.contacts.find(value => value.user.id === conversation);
+  const previousConversation = useRef(conversation);
+  const previousDeletions = useRef<Record<string, number>>({});
+  useEffect(() => {
+    const entries = state.deletedConversations ?? {};
+    const peers = Object.keys(entries).filter(peer => entries[peer] > (previousDeletions.current[peer] ?? 0));
+    previousDeletions.current = entries;
+    const active = previousConversation.current;
+    previousConversation.current = conversation;
+    if (!peers.length) return;
+    setDrafts(current => Object.fromEntries(Object.entries(current).filter(([peer]) => !peers.includes(peer))));
+    for (const peer of peers) { offsets.current.delete(peer); scrollPositions.current.delete(peer); }
+    if (!peers.includes(active)) return;
+    navigation.clear(); setProfile(undefined); setHistory(false); setSheet(undefined); setChats(true);
+  }, [conversation, state.deletedConversations]);
   const select = (user?: LoungeAccount) => {
     navigation.clear();
     controller.setViewing(false);
@@ -77,9 +92,12 @@ export function useMobileLounge(controller: LoungeController) {
   const latest = () => { navigation.clear(); setAtBottom(true); setFollowing(true); setShowLatest(false); };
   const cancelReply = () => change({ ...draft, reply: undefined });
   useEffect(() => {
+    controller.setGroupViewing({ thread: !chats && !sheet && !history && !avatar && !preview
+      && !moderating && !blocking && !profile && !deleting && !composerOverlay,
+    history: history && !preview && !profile });
     controller.setViewing(atBottom && !chats && !sheet && !history && !avatar && !preview
       && !moderating && !blocking && !profile && !deleting && !composerOverlay && !navigation.focus);
-    return () => controller.setViewing(false);
+    return () => { controller.setViewing(false); controller.setGroupViewing({ thread: false, history: false }); };
   }, [controller, atBottom, chats, sheet, history, avatar, preview, moderating, blocking,
     profile, deleting, composerOverlay, conversation, navigation.focus]);
   useEffect(() => {

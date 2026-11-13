@@ -6,18 +6,20 @@ import { BrowserClientContext } from '../file-preview/workspace/browserClient';
 import { remoteStatusPage } from './remoteStatusPage';
 
 const PREVIEW_REFRESH_MS = 2_000;
-export function RemoteStatusSurface({ tab, active, command, onNavigate, t }: BrowserSurfaceProps) {
+export function RemoteStatusSurface({ tab, active, command, onNavigate, onLoadingChange, t }: BrowserSurfaceProps) {
   const client = useContext(BrowserClientContext);
   const session = useRef<ReturnType<typeof remoteStatusPage>>();
   const [frame, setFrame] = useState<BrowserReply['result']>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const current = useRef({ onNavigate, url: tab.url }); current.current.onNavigate = onNavigate;
+  const current = useRef({ onNavigate, onLoadingChange, url: tab.url });
+  current.current.onNavigate = onNavigate; current.current.onLoadingChange = onLoadingChange;
   useEffect(() => {
     if (!tab.url) return;
     const page = remoteStatusPage(client, tab.id, tab.url);
     session.current = page;
     current.current.url = tab.url;
+    current.current.onLoadingChange?.(true);
     setFrame(undefined); setFailed(false);
     return () => {
       session.current = undefined;
@@ -35,10 +37,11 @@ export function RemoteStatusSurface({ tab, active, command, onNavigate, t }: Bro
         const result = await page.read();
         if (stopped) return;
         if (result.image) { setFrame(result); setFailed(false); }
+        if (typeof result.loading === 'boolean') current.current.onLoadingChange?.(result.loading);
         if (result.url && result.url !== 'about:blank' && result.url !== current.current.url) {
           current.current.url = result.url; current.current.onNavigate(result.url);
         }
-      } catch { if (!stopped) setFailed(true); }
+      } catch { if (!stopped) { setFailed(true); current.current.onLoadingChange?.(false); } }
       finally { if (!stopped) timer = setTimeout(() => void read(), PREVIEW_REFRESH_MS); }
     };
     void read();
@@ -50,7 +53,9 @@ export function RemoteStatusSurface({ tab, active, command, onNavigate, t }: Bro
     void session.current?.command({ action: 'navigate', url: tab.url }).catch(() => setFailed(true));
   }, [tab.url]);
   useEffect(() => {
-    if (command) void session.current?.command({ action: command.action }).catch(() => setFailed(true));
+    if (command) void session.current?.command({ action: command.action }).then(reply => {
+      if (typeof reply?.result?.loading === 'boolean') current.current.onLoadingChange?.(reply.result.loading);
+    }).catch(() => { setFailed(true); current.current.onLoadingChange?.(false); });
   }, [command]);
   const viewport = frame?.viewport ?? { width: 1000, height: 700 };
   return <div className="pm-browser-surface codex-status-preview" onWheel={event => {

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { Item } from '../conversation/types';
 import { guiApi } from '../conversation/api';
 import { uiText } from '../localization/uiText';
+import { isItemFinished } from '../conversation/itemStatus';
 
 type Target = NonNullable<Item['detailsRef']>;
 export type ToolDetailsLoader = (target: Target) => Promise<{ item: Item }>;
@@ -11,13 +12,17 @@ export const ToolDetailsContext = createContext<{ load: ToolDetailsLoader; activ
 });
 const REFRESH_MS = 1000;
 
-function LoadedDetails({ item, children }: { item: Item; children: (item: Item) => ReactNode }) {
+function LoadedDetails({ item, children, onLoad }: {
+  item: Item; children: (item: Item) => ReactNode; onLoad?: (item: Item) => void;
+}) {
   const { load, active } = useContext(ToolDetailsContext);
   const target = item.detailsRef!;
   const [loaded, setLoaded] = useState<Item>();
   const [error, setError] = useState(false);
   const [attempt, retry] = useState(0);
   const pending = useRef<Promise<unknown>>();
+  const report = useRef(onLoad);
+  report.current = onLoad;
   useEffect(() => { setLoaded(undefined); }, [load]);
   useEffect(() => {
     if (!active) return;
@@ -33,7 +38,10 @@ function LoadedDetails({ item, children }: { item: Item; children: (item: Item) 
         const result = await request;
         if (disposed) return;
         setLoaded(result.item); setError(false);
-        if (item.status === 'inProgress') timer = setTimeout(() => void refresh(), REFRESH_MS);
+        report.current?.(result.item);
+        if (item.status === 'inProgress' && !isItemFinished(result.item.status)) {
+          timer = setTimeout(() => void refresh(), REFRESH_MS);
+        }
       } catch {
         if (!disposed) setError(true);
       }
@@ -51,8 +59,10 @@ function LoadedDetails({ item, children }: { item: Item; children: (item: Item) 
 }
 
 /** Mount only inside an opened detail view. Unmounting releases its payload and stops refreshes. */
-export function DeferredToolDetails({ item, children }: { item: Item; children: (item: Item) => ReactNode }) {
+export function DeferredToolDetails({ item, children, onLoad }: {
+  item: Item; children: (item: Item) => ReactNode; onLoad?: (item: Item) => void;
+}) {
   if (!item.detailsRef) return children(item);
   const key = JSON.stringify(item.detailsRef);
-  return <LoadedDetails key={key} item={item}>{children}</LoadedDetails>;
+  return <LoadedDetails key={key} item={item} onLoad={onLoad}>{children}</LoadedDetails>;
 }

@@ -37,7 +37,7 @@ export function useChatDraft({ threadId, sending, disabled, selection, send, rec
   const [images, setImages] = useState<DraftImage[]>([]);
   const [references, setReferences] = useState<AttachmentReference[]>([]);
   const restore = (message: QueueDraft) => {
-    setContent(queuedMessageText(message)); setImages(message.images.map(draftImage));
+    setContent(queuedMessageText(message)); setImages(message.images.map(url => draftImage(url)));
     setReferences(message.attachments ?? []); setError('');
   };
   const [error, setError] = useState('');
@@ -67,7 +67,7 @@ export function useChatDraft({ threadId, sending, disabled, selection, send, rec
     setContent(previous => queuedMessageText({ ...recovered,
       text: [previous.text, recovered.text].filter(Boolean).join('\n\n'),
       skills: [...draftSkills(previous), ...recovered.skills] }));
-    setImages(previous => [...previous, ...recovered.images.map(draftImage)]);
+    setImages(previous => [...previous, ...recovered.images.map(url => draftImage(url))]);
     setReferences(previous => [...previous, ...(recovered.attachments ?? [])]);
   }, [recovered, consumeRecovered, sending]);
 
@@ -132,8 +132,17 @@ export function useChatDraft({ threadId, sending, disabled, selection, send, rec
     setImages((current) => current.map((image) => image === original ? { ...image, url } : image));
     setError('');
   };
+  const addAnnotatedImage = (url: string) => {
+    if (disabled || sending || busy.current || submitting.current) {
+      throw new ChatImageError(translateMessage(getInterfaceLanguage(),
+        'client.chat.imageNotSavedTryFewerAnnotationsOrImages'));
+    }
+    validateChatImages([...images.map(image => image.url), url]);
+    setImages(current => [...current, draftImage(url)]);
+    setError('');
+  };
   return { text, setText, appendDictation, insertSkill, removeText, images, error, picking,
-    addImages, removeImage, replaceImage, submit,
+    addImages, removeImage, replaceImage, addAnnotatedImage, submit,
     restore, references, removeReference: (item: AttachmentReference) =>
       setReferences((value) => value.filter((reference) => reference !== item)),
     hasContent: Boolean(text.trim() || images.length || references.length) };

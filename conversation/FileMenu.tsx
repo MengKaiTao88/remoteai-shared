@@ -1,6 +1,6 @@
 import { uiText } from "../localization/uiText";
-import type { ReactNode } from "react";
-import { Dropdown, type MenuProps } from "antd";
+import type { KeyboardEvent, ReactNode } from "react";
+import { Dropdown, type DropdownProps, type MenuProps } from "antd";
 import { ChevronRight, Copy, File, FileDiff, FileSearch, FolderOpen, Save } from "lucide-react";
 import type { FileReference } from "./fileReference";
 import { useFileMenu } from "./useFileMenu";
@@ -15,12 +15,17 @@ const SUBMENU_PLACEMENTS: MenuProps["builtinPlacements"] = {
   leftTop: { points: ["tr", "tl"], overflow: { adjustX: true, adjustY: true, shiftX: true, shiftY: true } },
 };
 
-export function FileMenu({ path, line, column, children, className, onReview, preview = false }: FileReference & {
-  children: ReactNode; className?: string; onReview?: () => void; preview?: boolean;
+export function FileMenu({ path, line, column, children, className, onReview, preview = false,
+  primaryOpen = false }: FileReference & {
+  children: ReactNode; className?: string; onReview?: () => void; preview?: boolean; primaryOpen?: boolean;
 }) {
   const target = { path, ...(line && { line }), ...(column && { column }) };
   const menu = useFileMenu(target);
   const gesture = useThreadLongPress(() => menu.setOpen(true), { enabled: !menu.busy });
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Escape" || !menu.open) { gesture.onKeyDown(event); return; }
+    event.preventDefault(); event.stopPropagation(); menu.setOpen(false);
+  };
   const previewsFile = preview && menu.canPreview && !onReview;
   const openApplication = (application: string) => { void menu.perform({ type: "open", application }); };
   const vscode = menu.applications.find((application) => application.id === "vscode");
@@ -66,13 +71,17 @@ export function FileMenu({ path, line, column, children, className, onReview, pr
   // The browser retains its existing diff shortcut; local file operations belong to the desktop.
   if (!menu.desktop && onReview) return <button type="button" className={className}
     onClick={onReview} aria-label={uiText("client.composer.viewChangesTo", { value1: path })}>{children}</button>;
-  return <Dropdown trigger={onReview || previewsFile ? ["contextMenu"] : ["click", "contextMenu"]}
+  const triggers: DropdownProps["trigger"] = onReview || previewsFile ? ["contextMenu"] : ["click", "contextMenu"];
+  // Card actions stay anchored to their button, including keyboard and touch openings.
+  const dropdown = <Dropdown trigger={primaryOpen ? ["click"] : triggers}
     open={menu.open} onOpenChange={menu.setOpen} autoFocus
     overlayClassName={styles.popup} overlayStyle={{ maxWidth: 400 }}
-    menu={{ items, triggerSubMenuAction: "hover", builtinPlacements: SUBMENU_PLACEMENTS,
+    menu={{ items: primaryOpen ? items.filter(item => item?.key !== "open") : items,
+      triggerSubMenuAction: "hover", builtinPlacements: SUBMENU_PLACEMENTS,
       expandIcon: <ChevronRight size={14} aria-hidden="true" />,
-      onClick: () => menu.setOpen(false) }} disabled={menu.busy}>
+      onClick: () => menu.setOpen(false), onKeyDown }} disabled={menu.busy}>
     <button {...gesture} type="button" className={className ?? styles.link}
+      onKeyDown={onKeyDown}
       aria-label={onReview ? uiText("client.composer.viewChangesTo", { value1: path }) : uiText("client.desktopGuiErrors.message", { value1: uiText(previewsFile ? "client.composer.previewFile" : "client.projectBrowser.fileActions"), value2: path })}
       onClick={() => {
         if (onReview) { menu.setOpen(false); onReview(); }
@@ -80,4 +89,12 @@ export function FileMenu({ path, line, column, children, className, onReview, pr
       }}
       aria-haspopup="menu" aria-expanded={menu.open} disabled={menu.busy}>{children}</button>
   </Dropdown>;
+  if (!primaryOpen) return dropdown;
+  return <span className={styles.actions}>
+    <button type="button" className={className} disabled={menu.busy || !menu.desktop}
+      onClick={() => openApplication("default")}>
+      <File size={17} aria-hidden="true" />{uiText("client.projectExplorer.open")}
+    </button>
+    {dropdown}
+  </span>;
 }

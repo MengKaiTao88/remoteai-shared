@@ -5,6 +5,7 @@ import { ChatImageError, draftImage, MAX_CHAT_IMAGES, chatImageCharLimit,
 import { base64Bytes, getChatPolicy, isDirectChat, MIB } from '../policy';
 import { compressChatImage, ImagePolicyError } from '../compressImage';
 import { normalizeImageDataUrl } from '../imageDataUrl';
+import type { ConnectionMode } from '../protocol';
 
 function readOriginal(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -15,16 +16,16 @@ function readOriginal(file: File) {
   });
 }
 
-async function prepareImage(file: File) {
+async function prepareImage(file: File, mode?: ConnectionMode) {
   if ((file.type && !file.type.startsWith('image/')) || !file.size) {
     throw new ChatImageError(t("client.chat.chooseAValidImage"));
   }
-  const policy = getChatPolicy();
+  const policy = getChatPolicy(mode);
   if (file.size > policy.imageSourceMaxMb * MIB) {
     throw new ChatImageError(t("client.chat.eachImageMustBeUnderMbChooseASmallerImage", { value1: policy.imageSourceMaxMb }));
   }
-  if (isDirectChat() && /^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
-    return draftImage(normalizeImageDataUrl(await readOriginal(file)));
+  if (isDirectChat(mode) && /^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
+    return draftImage(normalizeImageDataUrl(await readOriginal(file)), mode);
   }
   try {
     const image = new Image();
@@ -43,20 +44,20 @@ async function prepareImage(file: File) {
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       const url = canvas.toDataURL('image/jpeg', quality);
       return { value: url, bytes: base64Bytes(url) };
-    }, policy, Math.floor((chatImageCharLimit() - 'data:image/jpeg;base64,'.length) / 4) * 3);
-    return draftImage(compressed);
+    }, policy, Math.floor((chatImageCharLimit(mode) - 'data:image/jpeg;base64,'.length) / 4) * 3, mode);
+    return draftImage(compressed, mode);
   } catch (error) {
     if (error instanceof ChatImageError || error instanceof ImagePolicyError) throw new ChatImageError(error.message);
     throw new ChatImageError(t("client.chat.couldNotReadThisImageTryAJpgOrPng"));
   }
 }
 
-export async function pickChatImages(files: File[], remaining: number): Promise<DraftImage[]> {
+export async function pickChatImages(files: File[], remaining: number, mode?: ConnectionMode): Promise<DraftImage[]> {
   if (files.length > remaining) throw new ChatImageError(t("client.chat.youCanAddUpToImagesAtATime", { value1: MAX_CHAT_IMAGES }));
   const images: DraftImage[] = [];
   for (const file of files) {
-    images.push(await prepareImage(file));
-    validateChatImages(images.map((image) => image.url));
+    images.push(await prepareImage(file, mode));
+    validateChatImages(images.map((image) => image.url), mode);
   }
   return images;
 }

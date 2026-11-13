@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Modal } from 'antd';
 import { Download, Maximize, Minimize, RotateCw } from 'lucide-react';
 import { displayText as t } from '../localization/messages';
@@ -8,6 +8,8 @@ import { previewAttachment } from './previewAttachment';
 import { LoungeFilePreviewContent } from './LoungeFilePreviewContent';
 import { useFileActions } from './useFileActions';
 import './filePreview.css';
+import { previewByteLimit } from '../file-preview/kinds';
+import { subscribeChatPolicy } from '../remote-chat/policy';
 
 export default function LoungeFilePreview({ file, controller, close }: {
   file: LoungeAttachment; controller: LoungeController; close: () => void;
@@ -18,6 +20,7 @@ export default function LoungeFilePreview({ file, controller, close }: {
   const [attempt, setAttempt] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const actions = useFileActions(file, controller);
+  const limit = useSyncExternalStore(subscribeChatPolicy, () => previewByteLimit(file.name, 'relay'));
   useEffect(() => {
     const abort = new AbortController();
     setBytes(undefined); setError(''); setProgress(0);
@@ -28,7 +31,7 @@ export default function LoungeFilePreview({ file, controller, close }: {
         ? cause.message : 'client.lounge.fileUnavailable');
     });
     return () => abort.abort();
-  }, [file, controller, attempt]);
+  }, [file, controller, attempt, limit]);
   return <Modal open onCancel={close} footer={null} width={fullscreen ? '100vw' : 1000}
     className={`lounge-file-preview${fullscreen ? ' is-fullscreen' : ''}`} centered={!fullscreen}
     title={<span className="lounge-file-preview-title">{file.name}</span>}>

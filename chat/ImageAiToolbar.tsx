@@ -6,10 +6,11 @@ import { useImageAiEdit } from './useImageAiEdit';
 import './imageAiToolbar.css';
 
 const icons = [Pencil, MessageSquarePlus, Scan, Eraser, RectangleHorizontal];
-export function ImageAiToolbar({ load, close, translate: t, originalAction, viewControls }: {
+export function ImageAiToolbar({ load, close, translate: t, originalAction, viewControls, annotation }: {
   load: () => Promise<string>; close: () => void; translate: (text: string) => string;
   originalAction?: ReactNode;
   viewControls?: ReactNode;
+  annotation?: { open: () => Promise<void>; busy: boolean };
 }) {
   const editor = useImageAiEdit({ load, close });
   if (!editor.available) return <>{originalAction}{viewControls}</>;
@@ -40,8 +41,13 @@ export function ImageAiToolbar({ load, close, translate: t, originalAction, view
       {originalAction}
       {IMAGE_AI_TOOLS.map((item, index) => {
         const Icon = icons[index];
-        return <button type="button" key={item.id} disabled={editor.busy || !editor.enabled}
-          aria-pressed={editor.tool === item.id} onClick={() => editor.select(item.id)}>
+        const annotate = item.id === 'annotate';
+        return <button type="button" key={item.id}
+          disabled={editor.busy || annotation?.busy || !editor.enabled || (annotate && !annotation)}
+          aria-pressed={editor.tool === item.id} onClick={() => {
+            if (annotate) void annotation?.open();
+            else editor.select(item.id);
+          }}>
           <Icon size={20} aria-hidden="true" /><span>{t(item.label)}</span></button>;
       })}
       {viewControls && <>

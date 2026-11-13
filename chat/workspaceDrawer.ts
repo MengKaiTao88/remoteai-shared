@@ -16,6 +16,7 @@ export interface WorkspaceTabs {
   register: (tab: WorkspaceTab) => () => void;
   open: (id: string) => void;
   close: (id: string, order: string[]) => string | null;
+  closeMany: (ids: string[], order: string[]) => string | null;
   hide: () => void;
   rememberOpener: () => void;
 }
@@ -28,9 +29,11 @@ export const workspaceTabId = {
 /** Internal drawers stay within their owning conversation, including remote workspaces. */
 export const WorkspaceDrawerContext = createContext<{
   active: boolean;
+  visible: boolean;
   /** Open content tabs remain active while the drawer is hidden or minimized. */
   hasOpenTabs: boolean;
   tabs: WorkspaceTabs;
+  open: () => void;
 } | null>(null);
 
 /** Portals retain the caller's providers and mounted state while the shared drawer changes tabs. */

@@ -1,0 +1,13 @@
+.start { display: flex; flex: 1; align-items: center; justify-content: center;
+  min-height: 0; overflow: auto; padding: 24px; }
+.actions { width: 100%; max-width: 480px;
+  button { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px 12px;
+    border: 0; border-bottom: 1px solid var(--gui-border); border-radius: 0;
+    color: var(--ink); background: transparent; font: inherit; text-align: start; cursor: pointer;
+    &:last-child { border-bottom: 0; }
+    &:hover:not(:disabled) { background: var(--green-soft); }
+    &:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+    &:disabled { opacity: .45; cursor: default; }
+    svg { flex-shrink: 0; color: var(--gui-muted); }
+  }
+}

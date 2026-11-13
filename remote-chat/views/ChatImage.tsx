@@ -1,13 +1,9 @@
-import { displayText } from '../../localization/browserClient';
 import { ViewportContent } from '../../chat/ViewportContent';
 import { t, useLanguage } from '../../localization/browserClient';
 import { createContext, useContext, useState } from 'react';
 import { useChatImage, type ImagePreviewOptions } from '../client/useChatImage';
-import { ImageViewer } from '../../chat/ImageViewer';
-import { downloadChatImage } from './downloadImage';
 import { FileEnvironmentContext } from '../../conversation/fileEnvironment';
-import { ImagePreview } from '../../conversation/ImagePreview';
-import { remoteImageBytes } from './remoteImageBytes';
+import { ChatImagePreview } from './ChatImagePreview';
 import { useDesktopLayout } from '../../layout/useDesktopLayout';
 import thumbnailStyles from '../../chat/toolImageThumbnail.module.css';
 import { ImageThumbnail } from '../../chat/ImageThumbnail';
@@ -36,7 +32,8 @@ function VisibleChatImage({ source, description = t("client.chat.image"), compac
 }) {
   useLanguage();
   const environment = useContext(FileEnvironmentContext);
-  const image = useChatImage(source, useContext(ChatImageContext));
+  const options = useContext(ChatImageContext);
+  const image = useChatImage(source, options);
   const [preview, setPreview] = useState(false);
   const panel = useContext(DetailsContext);
   const files = useContext(ChatFileContext);
@@ -65,10 +62,8 @@ function VisibleChatImage({ source, description = t("client.chat.image"), compac
       <img key={image.key} src={image.url} alt={description} loading="lazy" decoding="async"
         referrerPolicy="no-referrer" onError={image.fail} />
     </button></ImageOpenMenu>}
-    {preview && image.url && (environment ? <ImagePreview key={image.key} thumbnail={image.url} description={description}
-      load={image.original} prepare={remoteImageBytes} download={image.save ?? downloadChatImage}
-      close={() => setPreview(false)} /> : <ImageViewer key={image.key} thumbnail={image.url} description={description}
-      inlineViewControls={fixedImage}
-      translate={displayText} load={image.original} download={image.save ?? downloadChatImage} close={() => setPreview(false)} />)}
+    {preview && image.url && source && <ChatImagePreview key={`preview:${image.key}`} source={source}
+      thumbnail={image.url} description={description} options={options} inlineViewControls={fixedImage}
+      close={() => setPreview(false)} />}
   </>;
 }

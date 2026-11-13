@@ -4,6 +4,7 @@ import { ImageViewer } from "../chat/ImageViewer";
 import { FileEnvironmentContext } from './fileEnvironment';
 import { useImageMenu } from "./useImageMenu";
 import styles from "./ImagePreview.module.less";
+import type { ImageNavigation } from '../chat/ImageGallery';
 
 interface Props {
   thumbnail: string;
@@ -12,6 +13,7 @@ interface Props {
   close: () => void;
   prepare?: (url: string) => Promise<string>;
   download?: (url: string) => void | Promise<void>;
+  navigation?: ImageNavigation;
 }
 
 export function ImagePreview(props: Props) {

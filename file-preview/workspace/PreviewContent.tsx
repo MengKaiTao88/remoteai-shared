@@ -6,6 +6,8 @@ import { JsonPreview } from '../JsonPreview';
 import { isJsonPath } from '../jsonHighlightLimit';
 import { PreviewMarkdown } from "./PreviewMarkdown";
 import styles from "./preview.module.less";
+import { ResourceHtmlPreview } from './ResourceHtmlPreview';
+import { PdfUrlPreview } from '../PdfUrlPreview';
 
 function MediaPreview({ data }: { data: FilePreviewData }) {
   const [failed, setFailed] = useState(false);
@@ -13,9 +15,7 @@ function MediaPreview({ data }: { data: FilePreviewData }) {
   if (failed) return <p className={styles.feedback} role="status">
     {uiText("client.workspaceActions.thisFileCannotBePreviewedRightNowUseTheFile")}</p>;
   const onError = () => setFailed(true);
-  if (data.kind === "pdf") return <object className={styles.frame} data={data.url} type="application/pdf">
-    <p className={styles.feedback}>{uiText("client.workspaceActions.thisPdfCannotBePreviewedRightNowOpenItUsing")}</p>
-  </object>;
+  if (data.kind === "pdf") return <PdfUrlPreview url={data.url} name={data.name} size={data.size} remote={data.remote} />;
   if (data.kind === "image") return <div className={styles.imageArea}>
     <button type="button" className={styles.imageToggle} onClick={() => setOriginalSize(!originalSize)}>
       {originalSize ? uiText("client.workspaceActions.fitToWindow") : uiText("client.workspaceActions.originalSize")}
@@ -36,8 +36,7 @@ export function PreviewContent({ data, source }: { data: FilePreviewData; source
     if (isJsonPath(data.path)) return <JsonPreview text={data.text} size={data.size} line={data.line} />;
     return <PreviewCode text={data.text} path={data.path} line={data.line} />;
   }
-  if (data.kind === "html") return <iframe title={uiText("client.downloads.htmlPreview")} className={styles.frame}
-    src={data.url} sandbox="allow-scripts" referrerPolicy="no-referrer" />;
+  if (data.kind === "html") return <ResourceHtmlPreview data={data} />;
   if (data.kind === "markdown") return <PreviewMarkdown text={data.text ?? ""} path={data.path} url={data.url} />;
   return <MediaPreview key={data.url} data={data} />;
 }

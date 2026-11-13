@@ -1,41 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { fileResourceKey, fileResourceUrl, type BrowserResource }
   from '../../file-preview/workspace/browserResources';
-import { FilePreviewPanel } from '../../file-preview/workspace/FilePreviewPanel';
-import type { FilePreviewData } from '../files';
 import { filePreviewKind } from '../../file-preview/kinds';
 import { ChatFilePreviewContent, type FilePreviewContext } from './ChatFilePreview';
 import { ChatFileContext } from './ChatFileLink';
-import { loadVideoPreview } from './videoPreview';
-import { t } from '../../localization/browserClient';
+import { ChatBinaryFilePreview } from './ChatBinaryFilePreview';
 import { isDownloadOnlyFile } from '../filePreview';
 import { ResourceDownloadCard } from '../../file-preview/ResourceDownloadCard';
 import { FileDownloadButton } from '../../downloads/FileDownloadButton';
-
-function BinaryResource({ path, context, active }: { path: string; context: FilePreviewContext; active: boolean }) {
-  const [data, setData] = useState<FilePreviewData>();
-  const [failed, setFailed] = useState(false);
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    const controller = new AbortController();
-    let dispose: (() => Promise<void>) | undefined;
-    if (!context.threadId || !context.ready) { setFailed(true); return; }
-    void loadVideoPreview({ client: context.client, threadId: context.threadId, path, signal: controller.signal,
-      progress: (received, total) => { if (!controller.signal.aborted) setProgress(total ? received / total * 100 : 0); },
-    }).then(async result => {
-      dispose = result.dispose;
-      if (controller.signal.aborted) { await dispose(); return; }
-      setData({ sessionId: '', path, name: path.split(/[\\/]/).at(-1) ?? path,
-        kind: filePreviewKind(path) ?? 'text', url: result.url, text: null });
-    }).catch(() => { if (!controller.signal.aborted) setFailed(true); });
-    return () => { controller.abort(); void dispose?.(); };
-  }, [context.client, context.threadId, context.ready, path]);
-  if (failed) return <p role="status" className="chat-file-preview-note">{t('client.filePreview.unavailable')}</p>;
-  if (!data) return <p role="status" className="chat-file-preview-note">
-    {t('client.chat.loadingFile')} {Math.round(progress)}%</p>;
-  return <FilePreviewPanel data={data} active={active} embedded
-    fileActions={<FileDownloadButton path={path} context={context} />} />;
-}
+import { navigableBrowserResource } from '../../file-preview/workspace/resourceNavigation';
 
 function ChatResourceContent({ path, line, context, active }: {
   path: string; line?: number; context: FilePreviewContext; active: boolean;
@@ -47,13 +20,17 @@ function ChatResourceContent({ path, line, context, active }: {
     <FileDownloadButton path={path} context={context} />
   </ResourceDownloadCard>;
   return <ChatFileContext.Provider value={nestedContext}>
-    {binary ? <BinaryResource path={path} context={context} active={active} />
+    {binary ? <ChatBinaryFilePreview path={path} context={context} active={active} />
       : <ChatFilePreviewContent path={path} line={line} context={context} />}
   </ChatFileContext.Provider>;
 }
 
-export function chatBrowserResource(path: string, context: FilePreviewContext, line?: number): BrowserResource {
+function chatBrowserPage(path: string, context: FilePreviewContext, line?: number): BrowserResource {
   return { key: fileResourceKey({ path, threadId: context.threadId, line }),
     title: path.split(/[\\/]/).at(-1) ?? path, url: fileResourceUrl(path),
     render: props => <ChatResourceContent path={path} line={line} context={context} active={props.active} /> };
+}
+
+export function chatBrowserResource(path: string, context: FilePreviewContext, line?: number): BrowserResource {
+  return navigableBrowserResource(chatBrowserPage(path, context, line), next => chatBrowserPage(next, context));
 }

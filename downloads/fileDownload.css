@@ -31,4 +31,11 @@
 .file-download-message, .file-download-note {
   max-width: 400px; margin: 0; color: var(--muted, #718079); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere;
 }
+.file-download-control.is-compact { width: auto; flex: 0 0 auto; }
+.file-download-control.is-compact .file-download-actions { gap: 4px; flex-wrap: nowrap; }
+.file-download-control.is-compact .file-download-action {
+  width: 44px; min-height: 44px; padding: 0; border-radius: 10px;
+  color: var(--app-accent, #14806f); background: var(--app-canvas, #f2f6f4);
+}
+.file-download-feedback { display: grid; gap: 12px; width: min(280px, calc(100vw - 48px)); }
 @media (prefers-reduced-motion: reduce) { .file-download-action { transition: none; } }

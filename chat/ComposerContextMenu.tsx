@@ -1,6 +1,6 @@
 import { Dropdown, type MenuProps } from 'antd';
 import { ClipboardPaste, Copy, Redo2, Scissors, SquareDashed, Trash2, Undo2 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { MessageKey } from '../localization/messages';
 import { useThreadLongPress } from './useThreadLongPress';
 import { captureComposerSelection, editComposer, type ComposerEditAction,
@@ -73,6 +73,10 @@ export function ComposerContextMenu({ children, scope, active = true, translate 
       onClick: () => { void run(action); } },
     ...(action === 'redo' || action === 'delete' ? [{ type: 'divider' as const }] : []),
   ]);
+  const dismiss = (event: KeyboardEvent) => {
+    event.preventDefault(); event.stopPropagation();
+    generation.current++; setOpen(false); selection.current?.restore();
+  };
   return <Dropdown trigger={['contextMenu']} open={open} disabled={!active} autoFocus
     onOpenChange={(next, info) => {
       if (info.source === 'menu') return;
@@ -84,8 +88,7 @@ export function ComposerContextMenu({ children, scope, active = true, translate 
     dropdownRender={menu => <div className={styles.panel} onPointerDown={event => event.preventDefault()}
       onKeyDownCapture={event => {
         if (event.key !== 'Escape') return;
-        event.preventDefault(); event.stopPropagation();
-        generation.current++; setOpen(false); selection.current?.restore();
+        dismiss(event);
       }}>
       {menu}{error && <p role="alert" className={styles.error}>{error}</p>}
     </div>}>
@@ -97,6 +100,8 @@ export function ComposerContextMenu({ children, scope, active = true, translate 
       }}
       onPointerDown={event => { if (event.pointerType !== 'mouse') gestures.onPointerDown(event); }}
       onKeyDownCapture={event => {
+        // Right-click can leave focus in the editor; Escape must dismiss its menu before canceling an edit.
+        if (open && event.key === 'Escape') { dismiss(event); return; }
         if (!active || !(event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))) return;
         event.preventDefault();
         const target = event.target as HTMLElement;

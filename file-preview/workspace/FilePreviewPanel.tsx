@@ -8,7 +8,6 @@ import { PreviewContent } from "./PreviewContent";
 import { PreviewNavigation, type PreviewNavigationState } from "./PreviewNavigation";
 import styles from "./preview.module.less";
 import { BrowserImagePreview } from '../BrowserImagePreview';
-import { PdfUrlPreview } from '../PdfUrlPreview';
 
 export function FilePreviewPanel({ data, active, navigation, embedded = false, fileActions }: {
   data: FilePreviewData; active: boolean; navigation?: PreviewNavigationState; embedded?: boolean;
@@ -36,7 +35,6 @@ export function FilePreviewPanel({ data, active, navigation, embedded = false, f
       </FileMenu>}
     </header>
     {embedded && data.kind === 'image' ? <BrowserImagePreview src={data.url} name={data.name} />
-      : embedded && data.kind === 'pdf' ? <PdfUrlPreview url={data.url} name={data.name} />
-        : <PreviewContent data={data} source={source} />}
+      : <PreviewContent data={data} source={source} />}
   </section>;
 }

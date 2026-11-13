@@ -38,6 +38,11 @@ export interface Item {
   command?: string;
   commandPreview?: string;
   detailsRef?: { threadId: string; turnId: string; itemId: string };
+  processRef?: { threadId: string; turnId: string; itemId: string; endItemId: string };
+  activityCount?: number;
+  processCommandMetrics?: import('../remote-chat/commandMetrics').CommandMetrics;
+  /** Results displayed outside the collapsed process keep their existing presentation. */
+  processOutputs?: Item[];
   commandActions?: { type: string; name?: string; path?: string | null; query?: string | null }[];
   cwd?: string;
   status?: string;
@@ -209,7 +214,9 @@ export type ApprovalReply = {
   answers?: Record<string, { answers: string[] }>;
 };
 export type Request =
+  | import('./recovery/types').RecoveryRequest
   | ({ operation: 'toolDetails' } & NonNullable<Item['detailsRef']>)
+  | ({ operation: 'processDetails' } & NonNullable<Item['processRef']>)
   | Exclude<import('../project-browser/protocol').ProjectBrowserRequest, { operation: 'projectFiles' }>
   | { operation: 'suggestNextPrompt'; threadId: string; sourceTurnId: string; model: string;
       effort: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra' }

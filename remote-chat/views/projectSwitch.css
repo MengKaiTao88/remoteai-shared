@@ -16,6 +16,8 @@
 .chat-project-option > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .chat-project-option strong, .chat-project-option small { display: block; }
 .chat-project-option small { margin-top: 4px; color: var(--app-muted); font-size: 12px; }
-.chat-project-create { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.chat-project-choices .chat-project-create { display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 48px; margin-top: 12px; padding: 12px; border: 0; border-radius: 14px;
+  background: #00a982; color: #fff; font-weight: 700; }
 @media (min-width: 861px) { .chat-project-switch { margin-inline: 14px; } }
 @media (max-width: 860px) { .chat-project-files-trigger { display: none; } }

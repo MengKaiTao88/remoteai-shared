@@ -8,6 +8,10 @@ import { PreviewTransferProgress } from './PreviewTransferProgress';
 import { ImageViewerFrame } from './ImageViewerFrame';
 import { ImageAiToolbar } from './ImageAiToolbar';
 import { useMobileImageViewer } from './useMobileImageViewer';
+import type { ImageNavigation } from './ImageGallery';
+import { ImageEditor } from './ImageEditor';
+import { usePreviewImageAnnotation } from './usePreviewImageAnnotation';
+import { getInterfaceLanguage } from '../localization/interfaceLanguage';
 
 interface Props {
   thumbnail: string; description: string; load: PreviewImageLoader; close: () => void;
@@ -18,12 +22,14 @@ interface Props {
   formatError?: (error: unknown) => string;
   autoLoadOriginal?: boolean;
   inlineViewControls?: boolean;
+  navigation?: ImageNavigation;
 }
 
 export function ImageViewer({ thumbnail, description, load, close, download, contextMenu, feedback,
   translate = defaultText, formatError = remoteErrorText, autoLoadOriginal = false,
-  inlineViewControls = false }: Props) {
+  inlineViewControls = false, navigation }: Props) {
   const image = useImageViewer(load, autoLoadOriginal);
+  const annotation = usePreviewImageAnnotation(image.loadOriginal);
   const [downloadError, setDownloadError] = useState('');
   const [saving, setSaving] = useState(false);
   const mobile = useMobileImageViewer();
@@ -34,8 +40,13 @@ export function ImageViewer({ thumbnail, description, load, close, download, con
   </button>;
   const renderEditor = (viewControls?: ReactNode) => <ImageAiToolbar load={image.loadOriginal}
     close={close} translate={translate} viewControls={viewControls}
+    annotation={annotation.available ? annotation : undefined}
     originalAction={mobile ? undefined : originalAction} />;
+  if (annotation.editing) return <ImageEditor dataUrl={annotation.editing.source}
+    language={getInterfaceLanguage()} translate={translate} mode={annotation.editing.mode}
+    save={url => { annotation.save(url); close(); }} close={annotation.cancel} />;
   return <ImageViewerFrame src={image.url ?? thumbnail} description={description} close={close}
+    navigation={navigation}
     renderToolbar={inlineViewControls ? renderEditor : undefined}
     translate={translate} onError={image.fail} onContextMenu={(event) => {
       if (!contextMenu) return;
@@ -59,6 +70,8 @@ export function ImageViewer({ thumbnail, description, load, close, download, con
       <PreviewTransferProgress progress={image.progress} label={translate("client.shared.loadingFullImage")} /></div>}
     {downloadError && <div className="cs-image-status" role="status">{formatError(downloadError)}</div>}
     {feedback && <div className="cs-image-status" role="status">{feedback}</div>}
+    {annotation.failed && <div className="cs-image-status" role="alert">
+      {translate('client.shared.couldNotEditThisImageOpenItAgainToRetry')}</div>}
     {image.error && <div className="cs-image-status" role="status">{translate("client.shared.couldNotLoadFullImage")}</div>}
   </ImageViewerFrame>;
 }

@@ -5,6 +5,7 @@ import { FilePreviewPanel } from './FilePreviewPanel';
 import { fileResourceUrl } from './browserResources';
 import type { FilePreviewTarget } from './usePreviewHistory';
 import { uiText } from '../../localization/uiText';
+import { navigableBrowserResource } from './resourceNavigation';
 
 function FileResourceContent({ initial, active, reload }: {
   initial: FilePreviewData; active: boolean; reload?: () => Promise<FilePreviewData>;
@@ -23,7 +24,7 @@ function FileResourceContent({ initial, active, reload }: {
 }
 
 /** Keep one session per resource, replacing it only after a successful reload. */
-export function fileBrowserResource(options: {
+function fileBrowserPage(options: {
   data: FilePreviewData; key: string; api: typeof filePreviewApi; target: FilePreviewTarget;
 }): BrowserResource {
   let current = options.data;
@@ -42,4 +43,13 @@ export function fileBrowserResource(options: {
     release: () => { if (!closed) { closed = true; close(current); } },
     render: props => <FileResourceContent initial={current} active={props.active}
       reload={props.command?.action === 'reload' ? reload : undefined} /> };
+}
+
+export function fileBrowserResource(options: Parameters<typeof fileBrowserPage>[0]): BrowserResource {
+  return navigableBrowserResource(fileBrowserPage(options), async path => {
+    const target = { path, threadId: options.target.threadId };
+    const data = await options.api.open(target);
+    if (!data) throw new Error('Resource unavailable');
+    return fileBrowserPage({ ...options, data, target, key: fileResourceUrl(path) });
+  });
 }

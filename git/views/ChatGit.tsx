@@ -1,6 +1,6 @@
 import { displayError } from '../../localization/browserClient';
 import { Spin } from 'antd';
-import { useContext, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { WorkspaceDrawerContext } from '../../chat/workspaceDrawer';
 import { useDesktopLayout } from '../../layout/useDesktopLayout';
 import type { GitClient } from '../../remote-chat/gitTypes';
@@ -10,6 +10,7 @@ import { GitHistory } from './GitHistory';
 import { GitChanges } from './GitChanges';
 import { GitCommitFiles } from './GitCommitFiles';
 import { GitToolbar } from './GitToolbar';
+import { createGitWorkspaceClient } from '../../remote-chat/gitWorkspaceClient';
 import { GitFileActionDialog } from './GitFileActionDialog';
 import { GitRevisionDialog } from './GitRevisionDialog';
 import { enqueueGitPatch } from '../../downloads/gitPatch';
@@ -28,19 +29,21 @@ export function ChatGit(props: Props) {
   const desktop = useDesktopLayout();
   const shared = Boolean(workspace && (desktop || props.desktopDiffs));
   const [visible, setVisible] = useState(false);
-  const panel = useRemoteGit({ ...props, active: props.active && visible, refreshInterval: 1000 });
+  const workspaceGit = useMemo(() => createGitWorkspaceClient(props.client, props.cwd), [props.client, props.cwd]);
+  const panel = useRemoteGit({ ...props, client: workspaceGit.client, active: props.active && visible, refreshInterval: 1000 });
   return <GitDrawer {...props} onVisibilityChange={setVisible}>
     {active => <GitContent {...props} desktopDiffs={shared || props.desktopDiffs}
-      active={active} panel={panel} shared={shared} />}</GitDrawer>;
+      client={workspaceGit.client} active={active} panel={panel} shared={shared}
+      onRefresh={workspaceGit.refreshRepositories} />}</GitDrawer>;
 }
 
-function GitContent(props: Props & { panel: RemoteGit; shared: boolean }) {
+function GitContent(props: Props & { panel: RemoteGit; shared: boolean; onRefresh: () => void }) {
   const { panel } = props;
   const diffPath = panel.detail?.kind === 'diff' ? panel.detail.path : undefined;
   const detail = props.desktopDiffs && panel.detail?.kind === 'diff' ? parentGitDetail(panel.detail) : panel.detail;
-  const commitFiles = useGitCommitFiles(props.client, props.cwd, detail?.commit?.hash, props.active && props.connected);
+  const commitFiles = useGitCommitFiles(props.client, detail?.commit?.repository ?? props.cwd, detail?.commit?.hash, props.active && props.connected);
   const content = <div className="chat-git">
-      <GitToolbar panel={panel} connected={props.connected} />
+      <GitToolbar panel={panel} connected={props.connected} onRefresh={props.onRefresh} />
       {props.active && panel.fileAction && <GitFileActionDialog panel={panel} connected={props.connected} />}
       {props.active && panel.revisionAction && <GitRevisionDialog panel={panel} connected={props.connected} />}
       {!props.cwd && <p className="git-notice">{t("client.git.chooseAProjectFirst")}</p>}
@@ -51,7 +54,7 @@ function GitContent(props: Props & { panel: RemoteGit; shared: boolean }) {
       {panel.busy && !panel.loading && <div className="git-loading"><Spin size="small" />{t("client.threadActions.working")}</div>}
       {panel.detail?.kind === 'diff' && <GitDiff
         key={JSON.stringify([props.cwd, panel.detail.path, panel.detail.commit?.hash])}
-        client={props.client} cwd={props.cwd} detail={panel.detail} enabled={props.active && props.connected}
+        client={props.client} cwd={panel.detail.commit?.repository ?? props.cwd} detail={panel.detail} enabled={props.active && props.connected}
         version={panel.detail.commit ? undefined
           : panel.changes?.files.find(file => file.path === diffPath)?.version}
         desktop={Boolean(props.desktopDiffs)} onBack={panel.backDetail} />}
@@ -73,7 +76,7 @@ function GitContent(props: Props & { panel: RemoteGit; shared: boolean }) {
         </div>}
         {!panel.loading && panel.tab === 'changes' && <GitChanges panel={panel} connected={props.connected} />}
         {!panel.loading && panel.tab === 'history' && <GitHistory panel={panel} connected={props.connected}
-          onPatch={commit => enqueueGitPatch(props.client, props.cwd, commit.hash)} />}
+          onPatch={commit => enqueueGitPatch(props.client, commit.repository ?? props.cwd, commit.hash)} />}
       </>}
     </div>;
   if (props.shared) return content;

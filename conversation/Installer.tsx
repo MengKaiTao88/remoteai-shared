@@ -1,9 +1,10 @@
 import { uiText } from "../localization/uiText";
-import { Button, Progress } from "antd";
+import { Button } from "antd";
 import { Download, ExternalLink, RefreshCw, Terminal } from "lucide-react";
 import { isDesktopApp } from "../platform/localBackend";
 import type { CliInstallerState } from '../cli/installerState';
 import { CliManualDownload } from "./CliManualDownload";
+import { InstallationProgress } from '../cli/InstallationProgress';
 import styles from "./styles.module.less";
 
 export function Installer({ installer, compact = false, running = false, remote = false, disabled = false }: {
@@ -36,10 +37,6 @@ export function Installer({ installer, compact = false, running = false, remote 
       ? uiText("client.conversation.theUpdateIsDownloadedAndWillInstallWhenNoConversations")
       : uiText("client.conversation.downloadAboutMb", { value1: Math.ceil(release.size / 1024 / 1024) })}</small>}
     {running && available && <small>{uiText("client.conversation.youCanUpdateWhenTheCurrentTaskFinishes")}</small>}
-    {installing && <div className={styles.downloadProgress}>
-      <Progress percent={progress ? Math.floor(progress.downloaded / Math.max(progress.total, 1) * 100) : 0}
-        status="active" size="small" />
-      <span>{progress?.phase === "installing" ? uiText("client.app.installingAlmostDone") : uiText("client.conversation.downloadingCodex")}</span>
-    </div>}
+    {installing && <InstallationProgress progress={progress} />}
   </div>;
 }

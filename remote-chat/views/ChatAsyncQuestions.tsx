@@ -2,15 +2,34 @@ import { displayError } from '../../localization/browserClient';
 import { t, useLanguage } from '../../localization/browserClient';
 import { useRef, useState } from 'react';
 import { MessageCircle, Trash2 } from 'lucide-react';
+import { Button, Input, Radio } from 'antd';
 import { AdaptiveSheet } from '../../layout/AdaptiveSheet';
+import { submitQuestionOnEnter } from '../../conversation/questionKeyboard';
 import { pendingQuestions } from '../client/asyncQuestions';
 import type { Item, Thread } from './types';
 import { useDismissedQuestions } from './useDismissedQuestions';
+import './asyncQuestions.css';
 
 interface Props {
   thread: Thread | null; disabled: boolean; error: string;
   scope: string;
   answer: (item: Item, answers: string[]) => Promise<boolean>;
+}
+function QuestionFields({ questions, answers, disabled, update }: {
+  questions: NonNullable<Item['questions']>; answers: string[]; disabled: boolean;
+  update: (index: number, value: string) => void;
+}) {
+  return <>{questions.map((question, index) => <fieldset key={index} className="chat-question" disabled={disabled}>
+    <legend>{question.title}</legend>
+    {!!question.options?.length && <Radio.Group className="chat-question-options" value={answers[index]}
+      disabled={disabled} onChange={event => update(index, event.target.value)}>
+      {question.options.map((option, position) => <Radio key={position} value={option}>{option}</Radio>)}
+    </Radio.Group>}
+    <Input.TextArea aria-label={question.title}
+      placeholder={t("client.composer.typeYourAnswerAndPressEnterToSend")} autoFocus={index === 0}
+      autoSize={{ minRows: 3, maxRows: 8 }} disabled={disabled}
+      value={answers[index] ?? ''} onChange={event => update(index, event.target.value)} />
+  </fieldset>)}</>;
 }
 function QuestionCard({ item, disabled, error, answer, onDelete }: Omit<Props, 'thread' | 'scope'> & {
   item: Item; onDelete: () => void;
@@ -42,22 +61,25 @@ function QuestionCard({ item, disabled, error, answer, onDelete }: Omit<Props, '
       <button type="button" className="chat-question-delete" aria-label={t("client.chat.dismissFollowUpQuestion", { value1: questions[0]?.title ?? '' })}
         disabled={busy} onClick={onDelete}><Trash2 size={16} /></button>
     </div>
-    {open && <AdaptiveSheet open title={t("client.chat.moreInformationNeeded")} width={520} onClose={() => { if (!busy) setOpen(false); }}>
-      <form className="chat-detail-stack" onSubmit={event => { event.preventDefault(); void submit(); }}>
-        {questions.map((question, index) => <fieldset key={index} className="chat-question" disabled={disabled || busy}>
-          <legend>{question.title}</legend>{question.options?.map((option, position) =>
-            <label className="chat-choice" key={position}><input type="radio" name={`${item.id}:${index}`}
-              checked={answers[index] === option} onChange={() => update(index, option)} /><span>{option}</span></label>)}
-          <textarea className="chat-answer" aria-label={question.title} placeholder={t("client.chat.enterYourAnswer")} rows={2}
-            value={answers[index] ?? ''} onChange={event => update(index, event.target.value)} />
-        </fieldset>)}
+    {open && <AdaptiveSheet open title={t("client.chat.moreInformationNeeded")} width={560}
+      className="chat-question-sheet" titleIcon={<MessageCircle className="chat-question-icon" size={20} />}
+      onClose={() => { if (!busy) setOpen(false); }}>
+      <form className="chat-question-form" aria-busy={busy}
+        onSubmit={event => { event.preventDefault(); void submit(); }}>
+        <div className="chat-question-fields" onKeyDown={event => submitQuestionOnEnter(event, submit)}>
+          <QuestionFields questions={questions} answers={answers} disabled={disabled || busy} update={update} />
+        </div>
         {(error || failure) && <p role="alert" className="chat-error">{error || failure}</p>}
-        <div className="chat-question-actions">
-          <button type="button" className="chat-button" disabled={busy}
-            onClick={() => { if (!submitting.current) { setOpen(false); onDelete(); } }}>{t("client.downloads.cancelAnswer")}</button>
-          <button type="submit" className="chat-button chat-primary"
-            disabled={busy || disabled || answers.some(value => !value.trim())}>
-            {busy ? t("client.imageAi.submitting") : t("client.chat.submitAnswer")}</button>
+        <div className="chat-question-footer">
+          <small>{t("client.chat.enterToSendShiftEnterForANewLine")}</small>
+          <div className="chat-question-actions">
+            <Button disabled={busy} onClick={() => {
+              if (!submitting.current) { setOpen(false); onDelete(); }
+            }}>{t("client.downloads.cancelAnswer")}</Button>
+            <Button htmlType="submit" type="primary" loading={busy}
+              disabled={busy || disabled || answers.some(value => !value.trim())}>
+              {busy ? t("client.imageAi.submitting") : t("client.chat.submitAnswer")}</Button>
+          </div>
         </div>
       </form>
     </AdaptiveSheet>}

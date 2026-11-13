@@ -1,6 +1,7 @@
 import { useProjectBrowsers } from '../useProjectBrowsers';
 import { useContext } from 'react';
 import { WorkspaceDrawerContext, workspaceTabId } from '../../chat/workspaceDrawer';
+import { useWorkspaceLauncher } from '../../chat/workspaceLaunchers';
 import { FolderSearch } from 'lucide-react';
 import type { ProjectBrowserClient } from '../protocol';
 import { ProjectBrowserDrawer } from './ProjectBrowserDrawer';
@@ -16,13 +17,15 @@ export function ProjectBrowserButton({ client, cwd, connected, active, className
   const workspace = useContext(WorkspaceDrawerContext);
   const id = workspaceTabId.files(cwd);
   const visible = workspace?.tabs.visible && workspace.tabs.selected === id;
+  const openFiles = () => {
+    if (!workspace?.tabs.entries.some(tab => tab.id === id)) browsers.open(cwd);
+    workspace?.tabs.open(id);
+  };
+  useWorkspaceLauncher({ id: 'files', enabled: active && connected && Boolean(cwd), open: openFiles });
   return <>
     <button type="button" className={className} disabled={!active || !connected || !cwd}
       aria-label={t("client.projectBrowser.browseFiles")} aria-haspopup="dialog" aria-expanded={Boolean(visible)}
-      onClick={() => {
-        if (!workspace?.tabs.entries.some(tab => tab.id === id)) browsers.open(cwd);
-        workspace?.tabs.open(id);
-      }}>
+      onClick={openFiles}>
       <FolderSearch size={16} /><span>{t("client.projectBrowser.browseFiles")}</span></button>
     {browsers.projects.map(project => <ProjectBrowserDrawer key={project} client={client} cwd={project}
       connected={connected} active={active && browsers.visible === project}

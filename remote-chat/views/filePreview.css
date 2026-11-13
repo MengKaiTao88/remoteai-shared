@@ -20,27 +20,34 @@
 .chat-download-file-transfer .file-download-control { max-width: none; }
 .chat-download-file-transfer .file-download-action { flex: 1; }
 .chat-file-preview-note { max-width: 400px; margin: 0; color: var(--muted, #718079); font-size: 13px; line-height: 1.6; }
-.chat-file-fullscreen-toggle { display: none; }
 @media (max-width: 767px) {
-  .chat-file-fullscreen-toggle { display: grid; width: 44px; height: 44px; }
-  .chat-file-preview-sheet.mobile-popup { height: 92dvh; max-height: 92dvh; }
   .chat-file-preview-sheet .sheet-drag-surface,
   .chat-file-preview-sheet .adaptive-sheet-content,
   .chat-file-preview-sheet .chat-detail-stack,
   .chat-file-preview-sheet .chat-html-preview {
     display: flex; flex-direction: column; flex: 1; min-height: 0;
   }
-  .chat-file-preview-sheet .sheet-header { flex-shrink: 0; }
-  .chat-file-preview-sheet .adaptive-sheet-content { padding-top: 12px; }
+  .chat-file-preview-sheet .sheet-header { flex-shrink: 0; gap: 8px; padding: 4px 12px; border-bottom: 0; }
+  .chat-file-preview-sheet .sheet-header h2 { margin: 0; font-size: 1em; letter-spacing: 0; }
+  .chat-file-preview-sheet .sheet-title-row > h2 { flex: 1; }
+  .chat-file-preview-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+  .chat-file-preview-sheet .chat-file-preview-mode { color: var(--app-accent, #14806f); }
+  .chat-file-preview-mode:focus-visible { outline: 2px solid var(--app-accent, #14806f); outline-offset: 2px; }
+  .chat-file-preview-sheet .sheet-close { width: 44px; height: 44px; }
+  .chat-file-preview-sheet .adaptive-sheet-content { padding: 0; }
+  .chat-file-preview-sheet .chat-detail-stack { gap: 4px; }
+  .chat-file-preview-sheet .chat-detail-stack > p,
+  .chat-file-preview-sheet .chat-detail-stack > .chat-code-block { margin-inline: 12px; }
   .chat-file-preview-sheet .chat-detail-stack > :not(.chat-html-preview) { flex-shrink: 0; }
   .chat-file-preview-sheet .chat-html-preview { overflow: auto; }
-  .chat-file-preview-sheet .chat-markdown-preview-toolbar { flex-shrink: 0; }
+  .chat-file-preview-sheet .chat-markdown-preview-toolbar { flex-shrink: 0; gap: 4px; margin: 0 12px 4px; }
+  .chat-file-preview-sheet .chat-markdown-preview-modes button { padding-inline: 14px; border-radius: 10px; }
+  .chat-file-preview-sheet .chat-markdown-preview > .chat-markdown { padding-inline: 12px; }
   .chat-file-preview-sheet .chat-html-frame { flex: 1; min-height: 0; height: 100%; }
   .chat-file-preview-sheet.mobile-popup-fullscreen {
     height: 100dvh; max-height: 100dvh; border-radius: 0;
-    padding-top: max(8px, env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
   }
-  .chat-file-preview-sheet.mobile-popup-fullscreen .chat-detail-stack > .file-download-control { display: none; }
   .chat-download-sheet .sheet-header h2 { font-size: 16px; letter-spacing: 0; }
   .chat-download-file { padding-bottom: 18px; }
   .chat-download-file-transfer .file-download-action { min-height: 42px; }

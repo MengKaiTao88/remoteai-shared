@@ -1,4 +1,11 @@
 .git-history { container: git-history / inline-size; }
+.git-history-repository { display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  margin: 10px 16px; min-width: 0; font-size: 12px; color: var(--git-muted, #718078); }
+.git-history-repository > span { flex-shrink: 0; }
+.git-history-repository select { flex: 1; min-width: 0; width: 100%; padding: 7px 8px; border-radius: 6px;
+  border: 1px solid var(--git-border, #dfe5df); color: var(--git-ink, #17211b);
+  background: var(--git-surface, white); font: inherit; text-overflow: ellipsis; }
+.git-history-repository select:focus-visible { outline: 2px solid var(--git-focus, #82b3a2); outline-offset: 1px; }
 .git-history-end { min-height: 24px; text-align: center; color: var(--git-muted, #718078); font-size: 12px; }
 .chat-git .git-history-row {
   display: flex;

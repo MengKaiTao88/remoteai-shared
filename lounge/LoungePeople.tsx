@@ -13,12 +13,13 @@ import { useLoungeNotificationSettings } from './useLoungeNotificationSettings';
 import { notificationActionLabel } from './notificationSettings';
 import { LoungeUnreadBadge } from './LoungeUnreadBadge';
 
-export function LoungePeople({ state, controller, select, block, newChat, pin, profile }: {
+export function LoungePeople({ state, controller, select, block, newChat, pin, profile, remove }: {
   controller: LoungeController;
   state: LoungeSnapshot; select: (user?: LoungeAccount) => void; block: (user: LoungeAccount) => void;
   newChat: () => void;
   pin: (userId: string, pinned: boolean) => void;
   profile: (user: LoungeAccount) => void;
+  remove: (user: LoungeAccount) => void;
 }) {
   const [query, setQuery] = useState('');
   const [menu, setMenu] = useState<string>();
@@ -57,12 +58,14 @@ export function LoungePeople({ state, controller, select, block, newChat, pin, p
           { key: 'pin', label: t(contact.pinned ? 'client.lounge.unpinChat' : 'client.lounge.pinChat') },
           notificationItem(contact.user.id),
           ...(state.directAvailable ? [{ key: 'block', label: t(state.blocked.includes(contact.user.id)
-            ? 'client.lounge.unblockUser' : 'client.lounge.blockUser') }] : [])],
+            ? 'client.lounge.unblockUser' : 'client.lounge.blockUser') }] : []),
+          { type: 'divider' }, { key: 'delete', label: t('client.lounge.deleteChat'), danger: true }],
         onClick: ({ key }) => {
           setMenu(undefined);
           if (key === 'pin') pin(contact.user.id, !contact.pinned);
           else if (key === 'notifications') toggleNotifications(contact.user.id);
           else if (key === 'profile') profile(contact.user);
+          else if (key === 'delete') remove(contact.user);
           else if (key === 'direct') select(contact.user); else block(contact.user);
         } }}>
         <button type="button"

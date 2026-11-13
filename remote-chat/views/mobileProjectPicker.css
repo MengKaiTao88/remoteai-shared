@@ -1,0 +1,67 @@
+.mobile-project-sheet.mobile-popup { height: 94dvh; max-height: 94dvh; padding-inline: 14px; }
+.mobile-project-sheet .sheet-drag-handle { min-height: 20px; padding-bottom: 8px; }
+.mobile-project-sheet .sheet-drag-surface { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+.mobile-project-sheet .sheet-header { flex-shrink: 0; padding-inline: 8px; border-bottom: 0; padding-bottom: 8px; }
+.mobile-project-sheet .sheet-header p { font-size: 12px; line-height: 1.5; max-width: none; white-space: normal; }
+.mobile-project-sheet .adaptive-sheet-content { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.chat-project-picker.mobile-project-picker { flex: 1; min-height: 0; width: 100%; max-width: 600px; gap: 14px;
+  color: var(--app-ink, #13231c); }
+.mobile-project-picker button { font: inherit; cursor: pointer; }
+.mobile-project-picker button:disabled { opacity: .4; cursor: default; }
+.mobile-project-picker button:focus-visible, .mobile-project-picker input:focus-visible {
+  outline: 2px solid var(--app-accent, #14806f); outline-offset: 3px; }
+.mobile-project-navigation { display: flex; align-items: stretch; gap: 8px; flex-shrink: 0; }
+.mobile-project-icon, .mobile-project-address, .mobile-project-shortcuts button {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px;
+  border: 1px solid var(--app-border, #dce6e0); border-radius: 18px;
+  background: var(--app-canvas, #f4f7f5); color: var(--app-ink, #13231c); }
+.mobile-project-icon { flex-shrink: 0; width: 36px; padding: 6px; }
+.mobile-project-address { flex: 1; min-width: 0; padding: 6px 11px; text-align: left; }
+.mobile-project-address > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-size: 13px; }
+.mobile-project-address svg, .mobile-project-entry svg, .mobile-project-current svg { flex-shrink: 0; }
+.mobile-project-shortcuts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; flex-shrink: 0; }
+.mobile-project-shortcuts button { flex-wrap: wrap; gap: 6px; padding: 5px; font-size: 13px; }
+.mobile-project-shortcuts svg, .mobile-project-entry > svg:first-child { color: var(--app-accent, #14806f); }
+.mobile-project-shortcuts button[aria-pressed="true"] {
+  border-color: var(--app-accent, #14806f); background: var(--app-accentSoft, #e6f8f1); }
+.mobile-project-locations { display: flex; flex-direction: column; flex-shrink: 0; max-height: 160px;
+  padding: 6px; overflow: auto; border: 1px solid var(--app-border, #dce6e0); border-radius: 14px;
+  background: var(--app-canvas, #f4f7f5); }
+.mobile-project-locations button { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 6px 10px;
+  border: 0; border-radius: 9px; background: transparent; color: inherit; text-align: left; overflow-wrap: anywhere; }
+.mobile-project-locations button:hover { background: var(--app-surface, #fff); }
+.mobile-project-input { width: 100%; min-width: 0; min-height: 42px; box-sizing: border-box; padding: 9px 12px;
+  border: 1px solid var(--app-border, #dce6e0); border-radius: 12px;
+  background: var(--app-canvas, #f4f7f5); color: inherit;
+  font: inherit; font-size: 14px; }
+.mobile-project-entries { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-inline: 8px; }
+.mobile-project-entries p { color: var(--app-muted, #6f8177); font-size: 13px; line-height: 1.6; }
+.mobile-project-entry { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 68px;
+  padding: 12px 2px; border: 0; border-bottom: 1px solid var(--app-border, #e0e8e3); background: transparent;
+  color: inherit; text-align: left; }
+.mobile-project-entry > span { flex: 1; min-width: 0; }
+.mobile-project-entry strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 16px; font-weight: 600; line-height: 1.5; }
+.mobile-project-entry small { display: block; margin-top: 2px; color: var(--app-muted, #6f8177); font-size: 12px;
+  line-height: 1.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-project-entry > svg:last-child { color: var(--app-muted, #6f8177); }
+.mobile-project-footer { display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; padding-bottom: 5px; }
+.mobile-project-current { display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+  border: 1px solid var(--app-border, #dce6e0); border-radius: 14px; background: var(--app-canvas, #f4f7f5); }
+.mobile-project-current > svg { color: var(--app-muted, #6f8177); }
+.mobile-project-current > span { flex: 1; min-width: 0; }
+.mobile-project-current small, .mobile-project-current strong { display: block; line-height: 1.5; }
+.mobile-project-current small { color: var(--app-muted, #6f8177); font-size: 11px; }
+.mobile-project-current strong { max-height: 4.5em; overflow-y: auto; overflow-wrap: anywhere; font-size: 14px;
+  font-weight: 500; }
+.mobile-project-picker .mobile-project-confirm { min-height: 48px; padding: 12px; border: 0; border-radius: 14px;
+  background: #00a982; color: #fff; font-size: 16px; font-weight: 700; }
+.mobile-project-new-folder { flex-shrink: 0; padding: 12px; border: 1px solid var(--app-border, #dce6e0);
+  border-radius: 14px; background: var(--app-canvas, #f4f7f5); font-size: 13px; }
+.mobile-project-new-folder label { display: block; }
+.mobile-project-new-folder input { margin-top: 8px; }
+.mobile-project-new-folder p { color: var(--app-danger, #c84f47); line-height: 1.5; }
+.mobile-project-new-folder > div { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+.mobile-project-new-folder button { min-height: 36px; padding: 6px 12px; border: 1px solid var(--app-border, #dce6e0);
+  border-radius: 9px; background: var(--app-surface, #fff); color: var(--app-ink, #13231c); }

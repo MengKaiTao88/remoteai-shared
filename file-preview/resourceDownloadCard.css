@@ -17,3 +17,7 @@
 .resource-download-card .file-download-action:hover:not(:disabled) { background: var(--green-dark); }
 .resource-download-button:disabled { opacity: .55; cursor: default; }
 .resource-download-button:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.resource-download-card .resource-download-button[aria-haspopup="menu"] {
+  padding-inline: 12px; background: var(--green-soft); color: var(--green-dark); }
+.resource-download-card .resource-download-button[aria-haspopup="menu"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--green) 20%, var(--panel)); }

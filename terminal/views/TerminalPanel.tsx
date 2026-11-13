@@ -53,7 +53,7 @@ export default function TerminalPanel({ panel, active, api, fill = false, transl
       aria-valuenow={resize.height} {...resize.handle} />}
     <div className={styles.toolbar}>
       <TerminalTabStrip tabs={panel.tabs} selected={panel.selected} select={panel.select}
-        remove={panel.remove} translate={translate} />
+        remove={panel.remove} removeTabs={panel.removeTabs} visible={visible} translate={translate} />
       <Tooltip title={translate("client.chat.newTerminal")} styles={{ root: { maxWidth: 400 } }}>
         <button className={styles.iconButton} aria-label={translate("client.chat.newTerminal")} onClick={panel.add}
           disabled={panel.tabs.length >= MAX_TERMINAL_TABS}><Plus size={18} /></button>

@@ -9,6 +9,7 @@ export function RemoteAccountSummary({ name, current, ready, running }: {
   let detail = <small>{uiText("client.workspaceActions.chooseAnAccountOnThisComputer")}</small>;
   if (!ready) detail = <small>{uiText("client.workspaceActions.waitingToConnectToTheComputer")}</small>;
   else if (running === false) detail = <small>{uiText("client.workspaceActions.proxyNotStarted")}</small>;
+  else if (current?.accountSource === 'claudeCode') detail = <small>Claude Code</small>;
   else if (current?.kind === 'account' && current.primaryRemainingPercent !== undefined) {
     detail = <GuiPrimaryQuota remainingPercent={current.primaryRemainingPercent} />;
   } else if (current?.detail) {

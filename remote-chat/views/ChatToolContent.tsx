@@ -39,8 +39,9 @@ function SearchContent({ item }: { item: Item }) {
   </div>;
 }
 
-export function ChatToolContent({ item }: { item: Item }) {
-  return <DeferredToolDetails item={item}>{loaded => <ChatToolBody item={loaded} />}</DeferredToolDetails>;
+export function ChatToolContent({ item, onLoad }: { item: Item; onLoad?: (item: Item) => void }) {
+  return <DeferredToolDetails item={item} onLoad={onLoad}>
+    {loaded => <ChatToolBody item={loaded} />}</DeferredToolDetails>;
 }
 
 function ChatToolBody({ item }: { item: Item }) {

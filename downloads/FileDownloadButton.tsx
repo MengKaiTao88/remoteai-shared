@@ -13,7 +13,7 @@ import { canShareDownload, DownloadShareError } from './shareDownload';
 const DOWNLOAD_STATUS = { queued: "client.downloads.queued", preparing: "client.downloads.preparingAndCheckingTheFile", downloading: "client.downloads.downloading.e2fc57",
   verifying: "client.downloads.verifying", ready: "client.downloads.readyToSave", saving: "client.downloads.saving", paused: "client.downloads.paused", completed: "client.chat.completed", failed: "client.downloads.downloadFailed" };
 
-interface Props { path: string; context: FilePreviewContext }
+interface Props { path: string; context: FilePreviewContext; compact?: boolean }
 
 export function FileDownloadButton(props: Props) {
   const connection = useSyncExternalStore(downloadManager.subscribe,
@@ -22,7 +22,7 @@ export function FileDownloadButton(props: Props) {
   return <DirectDownload {...props} />;
 }
 
-function ManagedDownload({ path, context, connection }: Props & { connection: DownloadConnection }) {
+function ManagedDownload({ path, context, connection, compact }: Props & { connection: DownloadConnection }) {
   const tasks = useSyncExternalStore(downloadManager.subscribe, downloadManager.snapshot);
   const task = [...tasks].reverse().find(task => task.source.owner === connection.owner
     && task.source.deviceId === connection.deviceId && task.source.threadId === context.threadId
@@ -58,7 +58,7 @@ function ManagedDownload({ path, context, connection }: Props & { connection: Do
   if (completed || task?.status === 'saving') action = 'save';
   else if (running) action = 'pause';
   else if (task) action = 'resume';
-  return <FileDownloadControl action={action} onAction={event => { void run(event); }}
+  return <FileDownloadControl compact={compact} action={action} onAction={event => { void run(event); }}
     onShare={completed && task && canShareDownload(task) ? event => { void run(event, 'share'); } : undefined}
     disabled={busy || task?.status === 'saving' || (!running && !completed && (!context.ready || !context.threadId))}
     progress={task && progress ? { percent: progress.percent, status: DOWNLOAD_STATUS[task.status],
@@ -67,10 +67,10 @@ function ManagedDownload({ path, context, connection }: Props & { connection: Do
     note={task ? "client.downloads.downloadsContinueInTheBackgroundTrackProgressInDownloads" : undefined} />;
 }
 
-function DirectDownload({ path, context }: Props) {
+function DirectDownload({ path, context, compact }: Props) {
   const download = useFileDownload({ ...context, path, target: browserDownloadTarget,
     prepare: () => prepareBrowserDownload(path), success: t("client.chat.yourBrowserIsSavingTheFile") });
-  return <FileDownloadControl action={download.busy ? 'cancel' : 'download'}
+  return <FileDownloadControl compact={compact} action={download.busy ? 'cancel' : 'download'}
     disabled={!download.busy && (!context.ready || !context.threadId)}
     onAction={download.busy ? download.cancel : download.start}
     progress={download.busy ? { percent: download.detail ? download.percent : undefined,

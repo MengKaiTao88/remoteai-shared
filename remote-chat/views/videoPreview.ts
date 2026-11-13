@@ -1,6 +1,7 @@
 import { t } from '../../localization/browserClient';
 import { downloadFile, type DownloadTarget } from '../fileDownload';
-import { MIB } from '../policy';
+import { MIB, checkFilePreviewSize } from '../policy';
+import { filePreviewKind } from '../../file-preview/kinds';
 import type { FileClient } from '../fileDownload';
 
 const MEMORY_PREVIEW_LIMIT = 64 * MIB;
@@ -18,7 +19,9 @@ export async function loadVideoPreview(options: {
     await removeFile?.().catch(() => console.warn('Unable to remove video preview'));
   };
   try {
-    await downloadFile({ ...options, target: async info => {
+    const pdf = filePreviewKind(options.path) === 'pdf';
+    await downloadFile({ ...options, ...(pdf ? { preview: 'pdf', checkSize: checkFilePreviewSize } as const : {}),
+      target: async info => {
       if (navigator.storage?.getDirectory) {
         const directory = await navigator.storage.getDirectory();
         const name = `chat-video-${crypto.randomUUID()}`;
@@ -31,7 +34,7 @@ export async function loadVideoPreview(options: {
             url = URL.createObjectURL(new Blob([await handle.getFile()], { type: info.mimeType })); },
           dispose: async () => { if (!completed) await writable.abort(); } } satisfies DownloadTarget;
       }
-      if (info.size > MEMORY_PREVIEW_LIMIT) throw new Error(t("client.chat.thisVideoIsLargeDownloadItToPlay"));
+      if (!pdf && info.size > MEMORY_PREVIEW_LIMIT) throw new Error(t("client.chat.thisVideoIsLargeDownloadItToPlay"));
       const parts: Uint8Array[] = [];
       return { write: async data => { parts.push(decode(data)); },
         finish: async () => { url = URL.createObjectURL(new Blob(parts, { type: info.mimeType })); },

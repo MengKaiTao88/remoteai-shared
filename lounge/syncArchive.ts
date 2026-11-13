@@ -2,17 +2,23 @@ import { historyKey, type HistoryCursor, type LoungeHistoryStore } from './archi
 import { messageConversation } from './contacts';
 import { mergeDelivery, receiptRank } from './delivery';
 import { parseMessage, type LoungeMessage } from './types';
+import { INVALID_GROUP_RECEIPT } from './groupReceipts';
+import { parseDeletionPage, type LoungeDeletionPage } from './deletions';
 
 export const SYNC_PAGE_SIZE = 25;
-export interface HistoryEntry { key: string; conversation: string; generation: number; status: string }
-export interface HistoryManifest { entries: HistoryEntry[]; next?: HistoryCursor }
+export interface HistoryEntry {
+  key: string; conversation: string; generation: number; status: string; readers?: string[];
+  groupReceiptError?: typeof INVALID_GROUP_RECEIPT;
+}
+export interface HistoryManifest { entries: HistoryEntry[]; next?: HistoryCursor; deletions?: LoungeDeletionPage }
 export interface HistorySyncAccess {
   generations: (peers: string[]) => Promise<Record<string, number>>;
 }
 
 export function syncEntry(message: LoungeMessage): HistoryEntry {
   return { key: historyKey(message), conversation: message.conversation ?? '', generation: message.generation ?? 0,
-    status: message.delivery?.status ?? '' };
+    status: message.delivery?.status ?? '', readers: message.delivery?.readers?.map(reader => reader.id),
+    groupReceiptError: message.delivery?.groupReceiptError };
 }
 
 export function validHistoryKey(value: unknown): value is string {
@@ -41,11 +47,17 @@ export function parseManifest(value: unknown): HistoryManifest {
   for (const entry of manifest.entries) {
     if (!entry || !validHistoryKey(entry.key) || typeof entry.conversation !== 'string'
       || entry.conversation.length > 80 || !Number.isSafeInteger(entry.generation) || entry.generation < 0
+      || entry.groupReceiptError !== undefined && entry.groupReceiptError !== INVALID_GROUP_RECEIPT
       || !['', 'pending', 'rejected', 'delivered', 'read'].includes(entry.status)) {
       throw new Error('invalid-history-entry');
     }
+    if (entry.readers !== undefined && (!Array.isArray(entry.readers)
+      || entry.readers.some(id => typeof id !== 'string' || !id || id.length > 80))) {
+      throw new Error('invalid-history-entry');
+    }
   }
-  return { entries: manifest.entries, next: historyCursor(manifest.next) };
+  return { entries: manifest.entries, next: historyCursor(manifest.next),
+    ...(manifest.deletions ? { deletions: parseDeletionPage(manifest.deletions) } : {}) };
 }
 
 /** Validates ownership again inside the encrypted channel; remote fields never choose a local account/archive. */
@@ -55,7 +67,10 @@ export function syncMessage(value: unknown, owner: string): LoungeMessage | unde
   if (message.recipient && message.sender.id !== owner && message.recipient.id !== owner) return;
   const conversation = messageConversation(message, owner);
   const delivery = message.delivery;
-  if (!message.recipient) return { ...message, conversation: undefined, delivery: undefined };
+  if (!message.recipient) return { ...message, conversation: undefined,
+    delivery: message.groupReceipt && delivery ? { ...delivery, retry: false,
+      direction: message.sender.id === owner ? 'outgoing' : 'incoming',
+      readers: message.sender.id === owner ? delivery.readers : undefined } : undefined };
   const direction = message.sender.id === owner ? 'outgoing' : 'incoming';
   const status = direction === 'incoming' ? (delivery?.status === 'read' ? 'read' : 'delivered')
     : delivery?.status ?? 'delivered';
@@ -69,19 +84,25 @@ export class SyncArchive {
     owner: string; store: LoungeHistoryStore; flush: () => Promise<void>;
     restored: (messages: LoungeMessage[]) => void; current: () => boolean;
     accept: (message: LoungeMessage) => boolean;
+    deletions?: { page: (after?: string) => LoungeDeletionPage;
+      apply: (entries: Record<string, number>) => Promise<void> };
   }) {}
 
   async manifest(before?: HistoryCursor): Promise<HistoryManifest> {
     await this.options.flush();
     const page = await this.options.store.page({ query: '', before, limit: SYNC_PAGE_SIZE });
     return { entries: page.messages.map(message => syncMessage(message, this.options.owner))
-      .filter((message): message is LoungeMessage => !!message).map(syncEntry), next: page.next };
+      .filter((message): message is LoungeMessage => !!message && this.options.accept(message)).map(syncEntry),
+      next: page.next, deletions: this.options.deletions?.page() };
   }
+  deletions(after?: string) { return this.options.deletions?.page(after) ?? { entries: {} }; }
+  async applyDeletions(page: LoungeDeletionPage) { await this.options.deletions?.apply(page.entries); }
 
   async read(key: string) {
     await this.options.flush();
     const message = await this.options.store.get?.(key);
-    return syncMessage(message, this.options.owner) ?? null;
+    const parsed = syncMessage(message, this.options.owner);
+    return parsed && this.options.accept(parsed) ? parsed : null;
   }
 
   async missing(entries: HistoryEntry[], access: HistorySyncAccess) {
@@ -90,8 +111,11 @@ export class SyncArchive {
     for (const entry of entries) {
       if (entry.conversation && generations[entry.conversation] !== entry.generation) continue;
       const previous = await this.read(entry.key);
+      const readers = new Set(previous?.delivery?.readers?.map(reader => reader.id));
+      const missingReaders = entry.readers?.some(id => !readers.has(id));
       if (!previous || receiptRank(entry.status) > receiptRank(previous.delivery?.status)
-        || entry.status === 'rejected' && previous.delivery?.status === 'pending') missing.push(entry.key);
+        || entry.status === 'rejected' && previous.delivery?.status === 'pending'
+        || missingReaders || entry.groupReceiptError && !previous.delivery?.groupReceiptError) missing.push(entry.key);
     }
     return missing;
   }
@@ -108,10 +132,15 @@ export class SyncArchive {
     if (!this.options.current() || !this.options.accept(incoming)) return;
     const message = previous ? { ...previous, delivery: mergeDelivery(previous.delivery, incoming.delivery) } : incoming;
     if (previous && previous.delivery?.status === message.delivery?.status
-      && previous.delivery?.confirmed === message.delivery?.confirmed) return;
+      && previous.delivery?.confirmed === message.delivery?.confirmed
+      && previous.delivery?.groupReceiptError === message.delivery?.groupReceiptError
+      && JSON.stringify(previous.delivery?.readers) === JSON.stringify(message.delivery?.readers)) return;
     await this.options.store.save(message);
     if (!this.options.accept(incoming) && incoming.conversation) {
-      await this.options.store.deleteConversation?.(incoming.conversation, (incoming.generation ?? 0) + 1);
+      // Timestamp-aware stores reject stale saves atomically; legacy generation stores need explicit cleanup.
+      if (!this.options.store.deleteBefore) {
+        await this.options.store.deleteConversation?.(incoming.conversation, (incoming.generation ?? 0) + 1);
+      }
       return;
     }
     const saved = await this.options.store.get?.(key);

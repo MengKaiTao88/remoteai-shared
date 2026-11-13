@@ -9,6 +9,8 @@ import { ChatMarkdown } from './ChatMarkdown';
 import { ChatDiff } from './ChatDiff';
 import { ChatCodeBlock } from './ChatCodeBlock';
 import { TaskReviewPanel } from '../../task-review/views/TaskReviewPanel';
+import { visibleTurnRequestErrors } from '../../conversation/turnRequestErrors';
+import { useEffect } from 'react';
 
 const TITLES = { get plan() { return t("client.chat.taskPlan"); }, get changes() { return t("client.chat.changesThisTurn"); },
   get error() { return t("client.chat.errorDetails"); }, get result() { return t("client.taskReview.taskReview"); } };
@@ -16,7 +18,12 @@ export function ChatTurnDetails({ turn, panel, onClose, tabId }: {
   turn: Turn; panel: TurnPanel; onClose: () => void; tabId?: string;
 }) {
   useLanguage();
-  const error = turn.error ?? turn.retryError;
+  const requestError = visibleTurnRequestErrors(turn).at(-1);
+  useEffect(() => {
+    if (panel === 'error' && !requestError) onClose();
+  }, [panel, requestError, onClose]);
+  if (panel === 'error' && !requestError) return null;
+  const error = requestError?.error;
   return <AdaptiveSheet open tabId={tabId} title={TITLES[panel]} width={760} onClose={onClose}
     presentation={panel === 'changes' || panel === 'result' ? 'drawer' : 'adaptive'}>
     <div className="chat-detail-stack">

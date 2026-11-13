@@ -1,6 +1,6 @@
 import { displayText } from '../../localization/browserClient';
 import { useState } from 'react';
-import { Popover, Tooltip, type PopoverProps } from 'antd';
+import { Popover, type PopoverProps } from 'antd';
 import { GitBranch, ChevronDown, RefreshCw, Download, ArrowDown, ArrowUp, ArrowDownUp, Undo2 } from 'lucide-react';
 import type { RemoteGit } from '../../remote-chat/useRemoteGit';
 import { GIT_ACTIONS, gitSyncCounts } from '../../remote-chat/gitActions';
@@ -20,7 +20,9 @@ const MENU_POPOVER_PROPS: PopoverProps = {
 };
 type ToolbarMenu = 'branches' | Exclude<GitAction, 'switch'>;
 
-export function GitToolbar({ panel, connected }: { panel: RemoteGit; connected: boolean }) {
+export function GitToolbar({ panel, connected, onRefresh }: {
+  panel: RemoteGit; connected: boolean; onRefresh?: () => void;
+}) {
   const [menu, setMenu] = useState<ToolbarMenu | null>(null);
   const [query, setQuery] = useState('');
   const disabled = panel.busy || !connected || !panel.changes;
@@ -53,24 +55,22 @@ export function GitToolbar({ panel, connected }: { panel: RemoteGit; connected: 
           return <Popover key={item.action} {...MENU_POPOVER_PROPS} placement="bottomRight" open={open}
             onOpenChange={value => changeMenu(item.action, value)}
             content={<GitSyncMenu panel={panel} disabled={disabled} onClose={close} action={item.action} />}>
-            <Tooltip title={open ? null : displayText(item.label)} styles={{ root: { maxWidth: 400 } }}>
-              <button type="button" aria-label={displayText(item.label)} disabled={disabled}
-                className={count !== undefined ? 'git-counted-action' : undefined}
-                aria-description={count !== undefined ? t('client.git.commitsToSync', { count }) : undefined}
-                aria-expanded={open}><Icon size={18} />
-                {count !== undefined && <span className="git-action-count" aria-hidden="true">{count}</span>}</button>
-            </Tooltip>
+            <button type="button" aria-label={displayText(item.label)} disabled={disabled}
+              title={open ? undefined : displayText(item.label)}
+              className={count !== undefined ? 'git-counted-action' : undefined}
+              aria-description={count !== undefined ? t('client.git.commitsToSync', { count }) : undefined}
+              aria-expanded={open}><Icon size={18} />
+              {count !== undefined && <span className="git-action-count" aria-hidden="true">{count}</span>}</button>
           </Popover>;
         })}
-        <Tooltip title={t('client.git.rollBackSelectedFiles')} styles={{ root: { maxWidth: 400 } }}>
-          <button type="button" aria-label={t('client.git.rollBackSelectedFiles')}
-            disabled={disabled || !Object.keys(panel.selected).length || panel.changes?.files.some(file => file.conflict)}
-            onClick={() => { close(); panel.requestFileAction('rollback'); }}><Undo2 size={18} /></button>
-        </Tooltip>
-        <Tooltip title={t('client.git.refreshGit')} styles={{ root: { maxWidth: 400 } }}>
-          <button type="button" aria-label={t('client.git.refreshGit')} disabled={disabled}
-            onClick={() => { panel.setDetail(null); void panel.refresh(); }}><RefreshCw size={18} /></button>
-        </Tooltip>
+        <button type="button" aria-label={t('client.git.rollBackSelectedFiles')}
+          title={t('client.git.rollBackSelectedFiles')}
+          disabled={disabled || !Object.keys(panel.selected).length || panel.changes?.files.some(file =>
+            file.conflict || (file.submodule && panel.selected[file.path]))}
+          onClick={() => { close(); panel.requestFileAction('rollback'); }}><Undo2 size={18} /></button>
+        <button type="button" aria-label={t('client.git.refreshGit')} title={t('client.git.refreshGit')}
+          disabled={panel.busy || !connected}
+          onClick={() => { panel.setDetail(null); onRefresh?.(); void panel.refresh(); }}><RefreshCw size={18} /></button>
       </div>
     </div>
   </div>;

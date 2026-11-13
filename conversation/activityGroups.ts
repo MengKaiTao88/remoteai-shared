@@ -1,10 +1,12 @@
 import type { Item } from "./types";
+import { hasVisibleProcessContent } from '../chat/processContent';
 
 /** Keep explanations and reasoning in place while consecutive tool operations share one disclosure. */
 export function groupConsecutiveActivities(items: Item[]) {
   const groups: { key: string; items: Item[]; activity: boolean }[] = [];
   for (const item of items) {
-    const activity = !["userMessage", "agentMessage", "reasoning"].includes(item.type);
+    if (!hasVisibleProcessContent(item)) continue;
+    const activity = !["userMessage", "agentMessage", "reasoning", "processSummary"].includes(item.type);
     const previous = groups.at(-1);
     if (activity && previous?.activity) previous.items.push(item);
     else groups.push({ key: item.id, items: [item], activity });

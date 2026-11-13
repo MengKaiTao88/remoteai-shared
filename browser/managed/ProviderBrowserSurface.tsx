@@ -5,6 +5,7 @@ import { Globe } from 'lucide-react';
 import type { BrowserSurfaceProps } from '../../provider-market/ProviderBrowser';
 import { nativeBrowserSession } from './providerBrowserSession';
 import { browserOverlayAttributes, hasBrowserOverlay } from './browserOverlays';
+import { BrowserFrame } from './BrowserFrame';
 
 function browserFeedback(state: { url: string; unsupported: boolean; needsDesktop: boolean; failed: boolean }) {
   if (!state.url) return 'market.browserBlank';
@@ -14,14 +15,15 @@ function browserFeedback(state: { url: string; unsupported: boolean; needsDeskto
   return null;
 }
 
-export function ProviderBrowserSurface({ tab, active, command, onNavigate, onPopup, t, hideForModal }: BrowserSurfaceProps) {
+export function ProviderBrowserSurface(props: BrowserSurfaceProps) {
+  const { tab, active, command, onNavigate, onPopup, onLoadingChange, t, hideForModal } = props;
   const host = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const desktop = isTauri();
-  const state = useRef({ tab, active, onNavigate, onPopup });
-  state.current = { tab, active, onNavigate, onPopup };
+  const state = useRef({ tab, active, onNavigate, onPopup, onLoadingChange });
+  state.current = { tab, active, onNavigate, onPopup, onLoadingChange };
   const refresh = useRef<() => void>();
   const nativeNavigation = useRef('');
   const lastCommand = useRef(0);
@@ -31,6 +33,7 @@ export function ProviderBrowserSurface({ tab, active, command, onNavigate, onPop
     const element = host.current;
     const session = nativeBrowserSession(tab.id, (reason) => {
       setUnsupported(String(reason).includes('market.browserHeadersUnsupported')); setFailed(true);
+      state.current.onLoadingChange?.(false);
     });
     let frame = 0;
     let modalVisible = false;
@@ -49,11 +52,14 @@ export function ProviderBrowserSurface({ tab, active, command, onNavigate, onPop
       });
     };
     refresh.current = sync;
-    const unlisten = listen<{ url: string; popup?: boolean }>(`provider-browser-${tab.id}`, ({ payload }) => {
-      if (payload.popup) { state.current.onPopup(payload.url); return; }
-      nativeNavigation.current = payload.url;
-      state.current.onNavigate(payload.url);
-    });
+    const unlisten = listen<{ url?: string; popup?: boolean; loading?: boolean }>(
+      `provider-browser-${tab.id}`, ({ payload }) => {
+        if (payload.popup && payload.url) { state.current.onPopup(payload.url); return; }
+        if (typeof payload.loading === 'boolean') state.current.onLoadingChange?.(payload.loading);
+        if (!payload.url) return;
+        nativeNavigation.current = payload.url;
+        state.current.onNavigate(payload.url);
+      });
     void unlisten.catch(() => setFailed(true));
     const observer = new ResizeObserver(sync); observer.observe(element);
     const checkModal = () => {
@@ -82,17 +88,19 @@ export function ProviderBrowserSurface({ tab, active, command, onNavigate, onPop
   useEffect(() => {
     if (!command || command.sequence === lastCommand.current) return;
     lastCommand.current = command.sequence;
-    if (!desktop) { setAttempt((value) => value + 1); setFailed(false); return; }
+    if (!desktop) {
+      if (command.action === 'reload' && failed) { setFailed(false); setAttempt(value => value + 1); }
+      return;
+    }
     void invoke('provider_browser_action', { id: tab.id, action: command.action })
-      .catch(() => setFailed(true));
+      .catch(() => { state.current.onLoadingChange?.(false); setFailed(true); });
   }, [command, desktop, tab.id]);
   const feedback = browserFeedback({ url: tab.url, unsupported, needsDesktop, failed });
   return <div className="pm-browser-surface" ref={host}>
     {feedback && <div className="pm-browser-feedback" role="status"><Globe size={32} /><p>{t(feedback)}</p>
       {failed && <button onClick={() => { setFailed(false); setAttempt((value) => value + 1); }}>
         {t('market.retry')}</button>}</div>}
-    {!feedback && !desktop && <iframe key={attempt} src={tab.url} title={tab.title || t('market.browserNewTab')}
-      sandbox="allow-scripts allow-forms allow-same-origin" referrerPolicy="no-referrer" onError={() => setFailed(true)} />}
+    {!feedback && !desktop && <BrowserFrame {...props} key={attempt} onError={() => setFailed(true)} />}
     {!desktop && !feedback && <div className="pm-browser-web-notice">{t('market.browserWebNotice')}</div>}
   </div>;
 }

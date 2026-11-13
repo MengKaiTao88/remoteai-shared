@@ -2,7 +2,7 @@ import { uiText } from "../localization/uiText";
 import { ViewportContent } from '../chat/ViewportContent';
 import { useContext, useState } from "react";
 import { FileEnvironmentContext } from './fileEnvironment';
-import { ImagePreview } from "./ImagePreview";
+import { MessageImagePreview } from './MessageImagePreview';
 import { ImageThumbnail } from '../chat/ImageThumbnail';
 import { useImageSource } from "./useImageSource";
 import { isTauri } from "@tauri-apps/api/core";
@@ -43,7 +43,7 @@ function LocalMessageImage({ src, alt, title }: MessageImageProps) {
       retry={() => { setFailedSource(undefined); image.retry(); }} onError={() => setFailedSource(image.url)}
       onPreview={() => setPreview(true)} openBrowser={panel?.openResource && src ? openBrowser : undefined} fallback={file
         ? <FileMenu {...file} preview>{uiText('client.composer.previewFile')}</FileMenu> : undefined} />
-    {preview && image.url && <ImagePreview key={src} thumbnail={image.url} description={description}
-      load={image.original} close={() => setPreview(false)} />}
+    {preview && image.url && src && <MessageImagePreview key={src} source={src}
+      thumbnail={image.url} description={description} close={() => setPreview(false)} />}
   </>;
 }

@@ -11,9 +11,11 @@ import './contextMenu.css';
 export interface LoungeMessageMenuActions {
   reply: (message: LoungeMessage) => void;
   direct?: () => void; block?: () => void; blocked?: boolean;
+  profile?: () => void;
 }
 
-export function LoungeMessageMenu({ message, reply, children, direct, block, blocked, mobile }: LoungeMessageMenuActions & {
+export function LoungeMessageMenu({ message, reply, children, direct, block, blocked, profile, mobile }:
+  LoungeMessageMenuActions & {
   message: LoungeMessage;
   mobile?: boolean;
   children: ReactElement<HTMLAttributes<HTMLElement>>;
@@ -33,11 +35,13 @@ export function LoungeMessageMenu({ message, reply, children, direct, block, blo
     if (key === 'copy') void copy();
     else if (key === 'direct') direct?.();
     else if (key === 'block') block?.();
+    else if (key === 'profile') profile?.();
     else reply(message);
   };
-  if (mobile) return <>{holder}<MobileLoungeMessageMenu reply={reply} direct={direct} block={block}
+  if (mobile) return <>{holder}<MobileLoungeMessageMenu reply={reply} direct={direct} block={block} profile={profile}
     blocked={blocked} select={select}>{children}</MobileLoungeMessageMenu></>;
   return <>{holder}<ThreadContextMenu open={open} onOpenChange={setOpen} overlayClassName="lounge-context-menu"
-    menu={{ items: messageMenuActions({ direct, block, blocked }).map(action => ({ ...action, label: t(action.label) })),
+    menu={{ items: messageMenuActions({ direct, block, blocked, profile })
+      .map(action => ({ ...action, label: t(action.label) })),
       onClick: ({ key }) => select(key) }}>{children}</ThreadContextMenu></>;
 }

@@ -1,11 +1,11 @@
 import { useRef } from 'react';
 import { Dropdown } from 'antd';
-import { Globe, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useThreadLongPress } from '../chat/useThreadLongPress';
 import { browserTabsToClose, type BrowserTabCloseAction } from './browserTabCommands';
 import type { BrowserTab } from './browserState';
 import type { MarketKey, MarketText } from './i18n';
-import { ProviderWebsiteIcon } from './ProviderWebsiteIcon';
+import { BrowserTabIcon } from './BrowserTabIcon';
 
 const CLOSE_ACTIONS: { action: BrowserTabCloseAction; label: MarketKey }[] = [
   { action: 'close', label: 'market.close' },
@@ -54,7 +54,7 @@ export function BrowserTabItem({ tab, tabs, active, menuOpen, t, select, close, 
             Home: -index, End: tabs.length - index - 1 };
           if (!(event.key in offsets)) return;
           event.preventDefault(); select(tabs[(index + offsets[event.key] + tabs.length) % tabs.length].id);
-        }}><ProviderWebsiteIcon url={tab.url} size={14} fallback={<Globe size={14} />} /><span>{name}</span></button>
+        }}><BrowserTabIcon tab={tab} /><span>{name}</span></button>
       <button type="button" aria-label={t('market.browserCloseTab', { name })}
         onClick={() => close(tab.id)}><X size={14} /></button>
     </div>

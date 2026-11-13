@@ -26,9 +26,11 @@ export function useComposerMenu({ draft, scope, active, refresh, compact }: Opti
   const open = active && (expanded || (!!trigger && triggerKey !== dismissed));
   const conversations = Boolean(trigger?.conversations) && !pickingPlugins;
   const files = Boolean(trigger?.files) && !pickingPlugins;
+  const ssh = Boolean(trigger?.ssh) && !pickingPlugins;
   useEffect(() => { setExpanded(false); setPickingPlugins(false); setDismissed(triggerKey); }, [scope, active]);
   useEffect(() => { if (!triggerKey) setDismissed(''); }, [triggerKey]);
-  useEffect(() => { if (open && !conversations && !files) refresh(); }, [open, conversations, files, refresh]);
+  useEffect(() => { if (open && !conversations && !files && !ssh) refresh(); },
+    [open, conversations, files, ssh, refresh]);
   useEffect(() => () => {
     if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current);
   }, [scope, active]);
@@ -77,7 +79,7 @@ export function useComposerMenu({ draft, scope, active, refresh, compact }: Opti
     close();
   };
   return { input, selection, setSelection: updateSelection, open, query: pickingPlugins ? '' : trigger?.query ?? '',
-    skillsOnly: trigger?.skillsOnly ?? false, conversations, files, plugins: pickingPlugins,
+    skillsOnly: trigger?.skillsOnly ?? false, conversations, files, ssh, plugins: pickingPlugins,
     openPlugins, consumeTrigger,
     choose, close, runCompact, restoreCaret, toggle: () => { if (open) close(); else setExpanded(true); } };
 }

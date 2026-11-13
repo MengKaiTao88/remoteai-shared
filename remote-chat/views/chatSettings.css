@@ -1,5 +1,5 @@
 .chat-settings.chat-settings-mobile {
-  --chat-settings-gap: 12px;
+  --chat-settings-gap: var(--chat-settings-shared-gap, 12px);
   --chat-settings-surface: #eef5f4;
   --chat-settings-divider: #dfe8e7;
   max-width: none;
@@ -8,7 +8,7 @@
   --chat-settings-surface: var(--app-canvas, #121614);
   --chat-settings-divider: var(--app-border, #35413a);
 }
-.chat-settings-sheet.mobile-popup { padding-inline: 14px; }
+.chat-settings-sheet.mobile-popup { padding-inline: var(--chat-settings-shared-padding, 14px); }
 .chat-settings-sheet .sheet-drag-handle { min-height: 24px; }
 .chat-settings-sheet.mobile-popup .adaptive-sheet-content { padding-top: 0; padding-bottom: 14px; }
 .chat-settings-mobile .chat-setting-entry {

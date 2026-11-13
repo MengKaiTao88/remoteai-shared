@@ -1,0 +1,10 @@
+.lounge-client-version { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .4em;
+  max-width: 100%; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
+.lounge-client-version.is-profile { display: flex; margin-top: 8px; }
+.lounge-client-version-list { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .35em; max-width: 100%; }
+.lounge-client-version-item { display: inline-flex; align-items: center; gap: .3em; min-width: 0; max-width: 100%; }
+.lounge-client-version-item svg, .lounge-client-version-separator { flex-shrink: 0; }
+.lounge-client-version-item.is-online svg { color: var(--lounge-online); }
+.lounge-client-version-item > span { min-width: 0; }
+.lounge-heading-peer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; }
+.lounge-heading-title h1 { min-width: 0; }

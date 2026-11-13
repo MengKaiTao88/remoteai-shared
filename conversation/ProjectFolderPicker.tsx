@@ -26,6 +26,7 @@ export function ProjectFolderPicker(props: Props) {
   const list = useRef<HTMLDivElement>(null);
   const label = (path: string) => projects.find(project => project.path === path)?.name ?? folderName(path);
   const paths = [...new Set([value, ...projects.map(project => project.path)])].filter(Boolean);
+  const clearable = Boolean(value && props.onClear);
   const matches = paths.filter(path => `${label(path)} ${path}`.toLocaleLowerCase()
     .includes(query.trim().toLocaleLowerCase()));
   useEffect(() => { if (disabled) setExpanded(false); }, [disabled]);
@@ -70,17 +71,25 @@ export function ProjectFolderPicker(props: Props) {
     </button>}
   </div>;
   return <span className={styles.selection}>
+    {clearable && <button type="button" className={styles.clearTrigger} disabled={disabled}
+      aria-label={uiText("client.conversation.clearProjectSelection")}
+      title={uiText("client.conversation.clearProjectSelection")}
+      onClick={() => { props.onClear?.(); close(); }}>
+      <Folder className={styles.folderIcon} size={16} aria-hidden="true" />
+      <X className={styles.clearIcon} size={16} aria-hidden="true" />
+    </button>}
     <Popover trigger="click" placement="topLeft" arrow={false} open={expanded && !disabled} content={panel}
       onOpenChange={open => {
         setExpanded(open); if (open) { setQuery(''); props.onOpen?.(); }
       }}
       afterOpenChange={open => { if (open) search.current?.focus(); }}
       styles={{ root: { maxWidth: 400 }, body: { padding: 0, borderRadius: 20, overflow: 'hidden' } }}>
-      <button ref={trigger} type="button" className={styles.name} disabled={disabled}
+      <button ref={trigger} type="button" className={`${styles.name} ${clearable ? styles.clearableName : ''}`}
+        disabled={disabled}
         aria-haspopup="menu" aria-expanded={expanded && !disabled} title={value || undefined}
         aria-label={props.ariaLabel ?? (value
           ? uiText("client.conversation.chooseProjectFolder", { value1: label(value) }) : uiText("client.conversation.chooseProjectFolder.f91460"))}>
-        <Folder size={16} aria-hidden="true" />
+        {!clearable && <Folder size={16} aria-hidden="true" />}
         <span>{value ? label(value) : uiText("client.chat.chooseProject")}</span>
       </button>
     </Popover>

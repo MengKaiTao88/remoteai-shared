@@ -16,7 +16,7 @@ export function useManagedBrowserTabs(options: {
     };
     const listener = client.subscribe(event => {
       if (event.type === 'opened') open(event.tab);
-      else if (!disposed && event.threadId === options.threadId) {
+      else if (event.type === 'closed' && !disposed && event.threadId === options.threadId) {
         closed.add(event.tabId); latest.current.close(event.tabId);
       }
     });

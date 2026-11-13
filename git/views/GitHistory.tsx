@@ -6,6 +6,7 @@ import { t, getLocale } from '../../localization/browserClient';
 import { useGitHistoryScroll } from './useGitHistoryScroll';
 import { GitCommitMenu } from './GitCommitMenu';
 import type { GitCommit } from '../../remote-chat/gitTypes';
+import { GitHistoryRepository } from './GitHistoryRepository';
 import './gitHistory.css';
 
 const HISTORY_STYLE = { '--git-history-compact-width': `${GIT_HISTORY_CONTENT_WIDTH}px`,
@@ -16,10 +17,11 @@ export function GitHistory({ panel, connected, onPatch }: {
 }) {
   const graph = useMemo(() => gitGraph(panel.commits), [panel.commits]);
   const pagination = useGitHistoryScroll(panel, connected);
-  return <div className="git-history" style={HISTORY_STYLE} ref={pagination.list} onScroll={pagination.onScroll}>
+  return <><GitHistoryRepository panel={panel} connected={connected} />
+    <div className="git-history" style={HISTORY_STYLE} ref={pagination.list} onScroll={pagination.onScroll}>
     {panel.changes && !panel.busy && !panel.commits.length &&
       <p className="git-notice">{t("client.git.noCommitsYet")}</p>}
-    {graph.rows.map(row => <GitCommitMenu key={row.commit.hash} commit={row.commit} panel={panel}
+    {graph.rows.map(row => <GitCommitMenu key={`${row.commit.repository ?? ''}:${row.commit.hash}`} commit={row.commit} panel={panel}
       connected={connected} onPatch={onPatch}><button type="button" className="git-history-row"
       style={{ minWidth: `calc(${row.width}px + var(--git-history-content-width, 560px))` }}
       disabled={!connected || panel.busy} onClick={() => panel.setDetail({ kind: 'files', commit: row.commit })}>
@@ -32,7 +34,7 @@ export function GitHistory({ panel, connected, onPatch }: {
       </svg>
       <span className="git-history-text">
         <span className="git-history-summary"><strong>{row.commit.subject}</strong>
-          <span className="git-refs">{row.commit.refs.map(ref => <em key={ref}>{ref}</em>)}</span>
+          <span className="git-refs">{row.commit.repositoryPath && <em>{row.commit.repositoryPath}</em>}{row.commit.refs.map(ref => <em key={ref}>{ref}</em>)}</span>
         </span>
         <small className="git-history-hash">{row.commit.hash.slice(0, 8)}</small>
         <small className="git-history-author">{row.commit.author}</small>
@@ -45,5 +47,5 @@ export function GitHistory({ panel, connected, onPatch }: {
       {panel.hasMore && pagination.failed && <button type="button" className="git-more"
         disabled={panel.busy || !connected} onClick={pagination.retry}>{t("client.terminal.retry")}</button>}
     </div>
-  </div>;
+  </div></>;
 }

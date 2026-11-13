@@ -7,8 +7,9 @@ import { canSelectProject } from '../../remote-chat/projects';
 import { directoryProject } from '../../remote-chat/projectDirectories';
 import { ProjectFolderPicker } from '../ProjectFolderPicker';
 
-export function RemoteProjectPicker({ state, controller, active }: {
+export function RemoteProjectPicker({ state, controller, active, workspace }: {
   state: ChatState; controller: ChatController; active: boolean;
+  workspace?: { cwd: string; disabled: boolean; choose: (cwd: string) => void };
 }) {
   const [projects, setProjects] = useState<ChatProject[]>([]);
   const [picking, setPicking] = useState(false);
@@ -17,8 +18,8 @@ export function RemoteProjectPicker({ state, controller, active }: {
   const mounted = useRef(false);
   const pending = useRef(false);
   const trigger = useRef<HTMLButtonElement>(null);
-  const cwd = state.selected?.cwd ?? state.draftProject?.cwd ?? '';
-  const disabled = !active || !canSelectProject(state);
+  const cwd = workspace?.cwd ?? state.selected?.cwd ?? state.draftProject?.cwd ?? '';
+  const disabled = !active || (workspace ? workspace.disabled : !canSelectProject(state));
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { if (disabled) setPicking(false); }, [disabled]);
   const load = async () => {
@@ -35,7 +36,8 @@ export function RemoteProjectPicker({ state, controller, active }: {
     }
   };
   const close = () => { setPicking(false); trigger.current?.focus(); };
-  const choose = (project: ChatProject) => { close(); void controller.selectProject(project); };
+  const choose = (project: ChatProject) => { close();
+    if (workspace) workspace.choose(project.cwd); else void controller.selectProject(project); };
   const known = [...projects, ...state.threads.filter(thread => thread.cwd).map(thread => directoryProject(thread.cwd))];
   return <>
     <ProjectFolderPicker value={cwd} disabled={disabled} triggerRef={trigger}
@@ -44,7 +46,8 @@ export function RemoteProjectPicker({ state, controller, active }: {
       onBrowse={() => setPicking(true)}
       onChange={path => choose(directoryProject(path))} onAdd={() => setPicking(true)}
       addLabel={uiText("client.conversation.newProject")}
-      onClear={state.selected ? undefined : () => { void controller.selectProject(null); }} />
+      onClear={workspace ? () => workspace.choose('')
+        : state.selected ? undefined : () => { void controller.selectProject(null); }} />
     {picking && !disabled && <ChatProjectPicker cwd={cwd} load={controller.loadProjectDirectories}
       mutate={controller.guiTools.projectBrowser.mutate} projects={known}
       close={close} choose={choose} />}

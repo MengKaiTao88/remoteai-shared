@@ -18,6 +18,8 @@ const STATUS = {
 
 export function downloadStatus(task: DownloadTask, retryAttempt: number, text: DownloadText) {
   if (retryAttempt) return text('client.downloads.workspace.waitingRetry');
+  if (task.sync && task.status === 'verifying') return text('client.conversationSync.importing');
+  if (task.sync && task.status === 'completed') return text('client.conversationSync.imported');
   if (task.status === 'preparing' && task.preparation) return text(archiveStatus(task.preparation));
   return text(STATUS[task.status]);
 }

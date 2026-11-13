@@ -7,6 +7,9 @@ import { commitFileStatus } from '../../remote-chat/gitCommitFiles';
 import { gitCommitColors } from './gitTheme';
 import fileIcon from '../../remote-chat/assets/git-icons/file-v2.png';
 import { getLocale, t } from '../../localization/browserClient';
+import { GitVirtualList } from './GitVirtualList';
+
+const fileKey = (file: GitCommitFile) => file.path;
 
 interface Props {
   commit: GitCommit; state: CommitFilesState; connected: boolean;
@@ -26,9 +29,9 @@ export function GitCommitFiles({ commit, state, connected, onSelect, onBack }: P
     {!state.files && !state.error && connected && <Spin />}
     {state.files && <>
       <div className="git-detail-title">{t("client.git.changedFiles", { count: state.files.length })}</div>
-      <div className="git-files git-commit-files">
-        {!state.files.length && <p className="git-notice">{t("client.git.thisCommitHasNoFileChanges")}</p>}
-        {state.files.map(file => {
+      <GitVirtualList items={state.files} itemKey={fileKey} className="git-commit-files"
+        empty={<p className="git-notice">{t("client.git.thisCommitHasNoFileChanges")}</p>}>
+        {file => {
           const status = commitFileStatus(file.status);
           const colors = gitCommitColors(file.status);
           return <button key={file.path} type="button" className="git-commit-file" disabled={!connected}
@@ -40,8 +43,8 @@ export function GitCommitFiles({ commit, state, connected, onSelect, onBack }: P
             <span className="git-commit-status" style={colors}>
               {t(status.label)}</span><ChevronRight size={14} />
           </button>;
-        })}
-      </div>
+        }}
+      </GitVirtualList>
     </>}
   </>;
 }

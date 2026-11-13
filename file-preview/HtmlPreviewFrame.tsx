@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { displayText as t } from '../localization/messages';
 import type { PreviewLoader } from './kinds';
 import { prepareHtmlPreview } from './htmlAssets';
@@ -6,6 +6,7 @@ import { loadHtmlMedia, type HtmlMediaUpdate } from './htmlMedia';
 import receiverUrl from './htmlMediaReceiver.js?url&no-inline';
 import { findHtmlImageLink, type HtmlImageLink } from './htmlImageLinks';
 import { HtmlImagePreview } from './HtmlImagePreview';
+import { ResourceFileNavigationContext } from './workspace/resourceNavigation';
 
 type PreparedPreview = Awaited<ReturnType<typeof prepareHtmlPreview>> & {
   channel: string; controller: AbortController;
@@ -15,6 +16,7 @@ const statusStyle = { maxWidth: 400 };
 export function HtmlPreviewFrame({ text, path, load, className }: {
   text: string; path: string; load: PreviewLoader; className?: string;
 }) {
+  const navigate = useContext(ResourceFileNavigationContext);
   const [result, setResult] = useState<PreparedPreview>();
   const [failed, setFailed] = useState(false);
   const [loadingMedia, setLoadingMedia] = useState(false);
@@ -56,12 +58,12 @@ export function HtmlPreviewFrame({ text, path, load, className }: {
       if (event.data?.type === 'loaded') { setLoadingMedia(false); if (event.data.failed) setFailed(true); }
       if (event.data?.type === 'image') {
         const link = findHtmlImageLink(result?.imageLinks, event.data.url);
-        if (link) setImage(link);
+        if (link) { if (navigate) navigate(link.path); else setImage(link); }
       }
     };
     window.addEventListener('message', ready);
     return () => window.removeEventListener('message', ready);
-  }, [result]);
+  }, [result, navigate]);
   if (!result) return <p role="status" style={statusStyle}>
     {t(failed ? 'client.filePreview.unavailable' : 'client.projectBrowser.loading')}</p>;
   return <>

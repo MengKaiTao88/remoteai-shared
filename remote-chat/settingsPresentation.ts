@@ -3,6 +3,9 @@ import type { ThreadTokenUsage } from './client/types';
 import type { SettingField, SettingOption } from './settingsMenu';
 import type { UsageSummary } from './usage';
 
+/** Shared by the native and browser chat settings sheets. */
+export const CHAT_SETTINGS_SHEET_LAYOUT = { maxHeightPercent: 88, horizontalPadding: 14, gap: 12 } as const;
+
 export const SETTING_SHORT_LABELS = {
   model: 'client.shared.model',
   effort: 'client.chatSettings.effort',
@@ -16,6 +19,7 @@ const SPEED_SHORT_LABELS: Record<string, string> = {
 
 /** Short visual labels retain the full accessible names and original option values. */
 export function settingShortLabel(field: SettingField, option: SettingOption) {
+  if (option.shortLabel) return option.shortLabel;
   return field === 'speed' ? SPEED_SHORT_LABELS[option.value] ?? option.label : option.label;
 }
 

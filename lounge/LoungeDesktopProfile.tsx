@@ -8,6 +8,7 @@ import { displayText as t } from '../localization/messages';
 import { useLoungeNameNavigation } from './useLoungeNameNavigation';
 import { X } from 'lucide-react';
 import './desktopProfile.css';
+import { LoungeClientVersion } from './LoungeClientVersion';
 
 export function LoungeDesktopProfile({ user, state, controller, close, editAvatar }: {
   user: LoungeAccount; state: LoungeSnapshot; controller: LoungeController; close: () => void; editAvatar: () => void;
@@ -23,6 +24,7 @@ export function LoungeDesktopProfile({ user, state, controller, close, editAvata
       <div className="lounge-profile-identity">
         <LoungeAvatar user={current} />
         <div className="lounge-profile-identity-copy"><h2>{accountName(current)}</h2>
+          <LoungeClientVersion user={current} profile />
           {accountName(current) !== current.account && <p className="lounge-profile-email">{current.account}</p>}
           {own && <Button onClick={() => void navigation.leave(editAvatar)}>{t('client.lounge.editAvatar')}</Button>}
         </div>

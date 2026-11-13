@@ -1,5 +1,5 @@
 import { displayError } from '../../localization/browserClient';
-import { Check, ChevronDown, Folder, Plus } from 'lucide-react';
+import { Check, ChevronDown, Folder, FolderMinus, Plus } from 'lucide-react';
 import { Grid } from 'antd';
 import { t, useLanguage } from '../../localization/browserClient';
 import { AdaptiveSheet } from '../../layout/AdaptiveSheet';
@@ -35,6 +35,12 @@ export function ChatProjectSwitch(props: ProjectSwitchProps) {
         {!!picker.error && <div><p role="alert" className="chat-error">{displayError(picker.error)}</p>
           <button type="button" className="chat-button" onClick={picker.retry}>{t("client.terminal.retry")}</button></div>}
         <div className="chat-project-options chat-scroll">
+          <button type="button" className="chat-project-option" aria-pressed={!picker.cwd}
+            onClick={() => picker.choose(null)}>
+            <FolderMinus size={18} aria-hidden="true" /><span>
+              <strong>{t('client.projectPicker.workWithoutProject')}</strong></span>
+            {!picker.cwd && <Check size={18} aria-hidden="true" />}
+          </button>
           {!picker.loading && !picker.error && !picker.projects.length
             && <p className="chat-muted">{t("client.conversation.noProjectsYet")}</p>}
           {picker.projects.map(project => <button type="button" key={project.cwd} className="chat-project-option"

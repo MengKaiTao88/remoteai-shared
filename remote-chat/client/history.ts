@@ -3,6 +3,8 @@ import { restoreTurnTiming } from '../../conversation/turnTiming';
 import { reconcileAcknowledgedItems } from '../../chat/acknowledgedMessages';
 import { mergeItemOrder } from '../../chat/itemOrder';
 import { mergeTurnOrder } from './turnOrder';
+import { reconcileProcessHistory } from './processHistory';
+import { mergeItemLifecycle } from '../../conversation/itemStatus';
 
 interface HistoryMergeOptions {
   authoritative?: boolean;
@@ -11,7 +13,7 @@ interface HistoryMergeOptions {
 }
 
 function mergeItem(snapshot: Item, live: Item, before?: Item): Item {
-  const merged = { ...snapshot, ...live };
+  const merged = mergeItemLifecycle(snapshot, live);
   for (const field of ['text', 'aggregatedOutput'] as const) {
     const readValue = snapshot[field];
     const liveValue = live[field];
@@ -22,6 +24,7 @@ function mergeItem(snapshot: Item, live: Item, before?: Item): Item {
 }
 
 function mergeTurn(snapshot: Turn, live: Turn, before: Turn | undefined, options: HistoryMergeOptions): Turn {
+  ({ snapshot, live } = reconcileProcessHistory(snapshot, live, before));
   const original = new Map(before?.items.map((item) => [item.id, item]));
   const hasAcknowledgements = snapshot.items.some((item) => item.localEcho) || live.items.some((item) => item.localEcho);
   const snapshotItems = reconcileAcknowledgedItems(snapshot.items, live.items);

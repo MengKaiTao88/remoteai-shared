@@ -14,14 +14,15 @@ interface Props {
   options: SettingOption[];
   onChange: (value: string) => void;
   inactive: boolean;
+  disabled?: boolean;
 }
 
-export function ChatSettingSegments({ field, compact, label, value, options, onChange, inactive }: Props) {
+export function ChatSettingSegments({ field, compact, label, value, options, onChange, inactive, disabled = false }: Props) {
   const language = useLanguage();
   const stacked = language !== 'zh' && language !== 'ja';
   const selected = options.findIndex(option => option.value === value);
-  const select = (index: number) => { if (!inactive && options[index]) onChange(options[index].value); };
-  const { preview, handlers } = useSettingSegmentDrag(inactive ? 0 : options.length, select);
+  const select = (index: number) => { if (!inactive && !disabled && options[index]) onChange(options[index].value); };
+  const { preview, handlers } = useSettingSegmentDrag(inactive || disabled ? 0 : options.length, select);
   const active = preview ?? selected;
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const changes: Record<string, number> = {
@@ -44,6 +45,7 @@ export function ChatSettingSegments({ field, compact, label, value, options, onC
         {active >= 0 && <span className="chat-setting-segments-thumb" aria-hidden="true"
           style={{ width: `${100 / options.length}%`, transform: `translateX(${active * 100}%)` }} />}
         {options.map((option, index) => <button key={option.value} type="button" role="radio"
+          disabled={disabled}
           aria-label={displayText(option.label)}
           aria-checked={selected === index} className={active === index ? 'is-selected' : undefined}
           aria-description={option.description ? displayText(option.description) : undefined}

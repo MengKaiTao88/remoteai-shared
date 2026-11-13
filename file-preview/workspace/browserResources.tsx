@@ -9,6 +9,7 @@ export interface BrowserResource {
   url: string;
   render: (props: BrowserSurfaceProps) => ReactNode;
   release?: () => void;
+  page?: (url: string) => BrowserResource | undefined;
 }
 
 export const BrowserResourcesContext = createContext<ReadonlyMap<string, BrowserResource>>(new Map());
@@ -26,9 +27,13 @@ export function useBrowserResources() {
 
 export function ResourceBrowserSurface(props: BrowserSurfaceProps) {
   const resource = useContext(BrowserResourcesContext).get(props.tab.id);
-  if (!resource || resource.url !== props.tab.url) return <WebsiteBrowserSurface {...props} />;
+  if (!resource || !browserResourcePage(resource, props.tab.url)) return <WebsiteBrowserSurface {...props} />;
   return <div className="website-resource-page"
     key={props.command?.action === 'reload' ? props.command.sequence : 0}>{resource.render(props)}</div>;
+}
+
+export function browserResourcePage(resource: BrowserResource | undefined, url: string) {
+  return resource?.url === url ? resource : resource?.page?.(url);
 }
 
 export function fileResourceKey(target: { path: string; threadId: string | null; line?: number; column?: number }) {

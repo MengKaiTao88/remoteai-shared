@@ -7,6 +7,7 @@ import type { ComposerPlugin } from '../../conversation/attachmentTypes';
 import type { RemoteComposerCatalog } from '../composerCatalog';
 import { skillDescription, skillLabel, type SkillCatalogState } from '../../chat/skillCatalog';
 import { useComposerMenuKeyboard, type ComposerMenuOption } from './useComposerMenuKeyboard';
+import { useChatSurfaceTheme } from './useChatSurfaceTheme';
 
 export type ComposerAddAction = 'camera' | 'photos' | 'file' | 'projectFiles' | 'projectPhotos' | 'plugins';
 const ADD_ACTIONS = [
@@ -31,6 +32,7 @@ interface CommandProps {
 export function ChatCommandMenu({ catalog, query, skillsOnly, compactReason, choose, compact, goal,
   close, input }: CommandProps) {
   const language = useLanguage();
+  const surfaceTheme = useChatSurfaceTheme();
   const search = query.toLocaleLowerCase();
   const skills = catalog.skills.filter(skill =>
     `${skill.name} ${skillLabel(skill)} ${skillDescription(skill, language)}`.toLocaleLowerCase().includes(search));
@@ -42,7 +44,7 @@ export function ChatCommandMenu({ catalog, query, skillsOnly, compactReason, cho
     ...skills.map(skill => ({ key: skill.path, enabled: skill.enabled, choose: () => choose(skill) })),
   ];
   const keyboard = useComposerMenuKeyboard({ input, query, options, close });
-  return <div className="chat-command-menu" aria-label={t("client.chat.commandsAndSkills")}>
+  return <div className="chat-command-menu" style={surfaceTheme} aria-label={t("client.chat.commandsAndSkills")}>
     <header><strong>{t("client.chat.commandsAndSkills")}</strong><button type="button" aria-label={t("client.chat.closeCommandsAndSkills")} onClick={close}>
       <X size={16} /></button></header>
     <div ref={keyboard.list} id={keyboard.id} className="chat-menu-options" role="menu">

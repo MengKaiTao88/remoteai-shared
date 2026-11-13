@@ -1,0 +1,86 @@
+@import (reference) '../../appearance/codexGuiBrand.less';
+
+.guiBrand { .codex-gui-brand(); font-weight: 600; }
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px;
+  overflow: hidden;
+  > :global(.ant-alert), .toolbar { flex-shrink: 0; }
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  > :global(.ant-input-affix-wrapper) { flex: 1; min-width: 180px; }
+}
+.source { flex: 1 1 320px; min-width: 0; max-width: 100%; }
+.table {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  > :global(.ant-table-wrapper), :global(.ant-spin-nested-loading), :global(.ant-spin-container),
+  :global(.ant-table), :global(.ant-table-container) { height: 100%; }
+  :global(.ant-table-container) { display: flex; flex-direction: column; min-height: 0; }
+  :global(.ant-table-header) { flex-shrink: 0; }
+  :global(.ant-table-tbody-virtual-holder) { overscroll-behavior: contain; }
+  :global(.ant-table-row) { align-items: stretch; }
+  :global(.ant-table-row .ant-table-cell) { display: flex; align-items: center; }
+  :global(.ant-table-row .ant-table-selection-column) { justify-content: center; }
+  :global(.ant-table-row .ant-table-cell:not(.ant-table-selection-column)):not(.titleColumn) {
+    justify-content: flex-end;
+  }
+}
+.titleColumn {
+  min-width: 0;
+  > :global(.ant-table-row-indent) { flex-shrink: 0; }
+}
+.titleCell { display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; }
+.titleCell > svg { flex-shrink: 0; }
+.expand, .expandSpace { flex-shrink: 0; width: 24px; margin-inline-end: 8px; }
+.expand {
+  display: inline-grid;
+  place-items: center;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  &:hover { background: var(--green-soft); }
+  &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+}
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dialog {
+  top: 24px;
+  padding-bottom: 0;
+  :global(.ant-modal-content) { height: calc(100dvh - 48px); display: flex; flex-direction: column; }
+  :global(.ant-modal-header) { flex-shrink: 0; padding-inline-end: 28px; }
+  :global(.ant-modal-body) { display: flex; flex: 1; min-height: 0; }
+  .panel { padding: 12px 0 0; }
+}
+.confirm { max-width: 400px; overflow-wrap: anywhere; }
+.duplicates { margin-block: 16px; }
+.provider {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-block: 16px;
+}
+@media (max-width: 640px) {
+  .panel { padding: 12px; }
+  .toolbar > :global(.ant-input-affix-wrapper) { flex-basis: 100%; }
+}

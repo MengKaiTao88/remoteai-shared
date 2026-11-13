@@ -27,7 +27,7 @@ function CapacityHint({ threadId, api }: { threadId: string; api: ContextSetting
 }
 
 export function ComposerContext({ tokenUsage, threadId, contextSettings, ready, beforeOpen }: Pick<ComposerProps,
-  'tokenUsage' | 'threadId' | 'contextSettings' | 'ready'> & { beforeOpen: () => void }) {
+  'tokenUsage' | 'threadId' | 'ready'> & { contextSettings?: ContextSettingsApi; beforeOpen: () => void }) {
   const language = useLanguage();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -40,7 +40,7 @@ export function ComposerContext({ tokenUsage, threadId, contextSettings, ready, 
     onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); close(); } }}>
     <div className="composer-context-heading"><span>{t("client.chat.contextWindow")}</span>
       <button type="button" className="composer-context-button" aria-label={t("client.chat.setContextCapacityForThisChat")}
-        disabled={!threadId || !ready} onClick={() => { setOpen(false); setEditing(true); }}>
+        disabled={!threadId || !ready || !contextSettings} onClick={() => { setOpen(false); setEditing(true); }}>
         <Settings size={14} aria-hidden="true" />
       </button>
     </div>
@@ -54,7 +54,7 @@ export function ComposerContext({ tokenUsage, threadId, contextSettings, ready, 
           capacity: formatCompactTokenCount(context.capacity, language),
         })}</div>
     </> : <div>{t("client.shared.noContextUsageYet")}</div>}
-    {open && threadId && ready && <CapacityHint threadId={threadId} api={contextSettings} />}
+    {open && threadId && ready && contextSettings && <CapacityHint threadId={threadId} api={contextSettings} />}
   </div>;
   return <>
     <Popover content={content} fresh destroyOnHidden trigger="click" placement="top" arrow={false} open={open}
@@ -71,7 +71,7 @@ export function ComposerContext({ tokenUsage, threadId, contextSettings, ready, 
         </svg>
       </button>
     </Popover>
-    {editing && threadId && <ComposerContextSettings threadId={threadId} api={contextSettings}
+    {editing && threadId && contextSettings && <ComposerContextSettings threadId={threadId} api={contextSettings}
       onClose={() => { setEditing(false); trigger.current?.focus(); }} />}
   </>;
 }

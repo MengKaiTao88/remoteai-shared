@@ -1,4 +1,4 @@
-import { File, MessageSquare, X } from 'lucide-react';
+import { File, MessageSquare, Terminal, X } from 'lucide-react';
 import { t } from '../../localization/browserClient';
 import type { AttachmentReference } from '../../conversation/attachmentTypes';
 import { ComposerAttachment } from '../../chat/ComposerAttachment';
@@ -16,8 +16,9 @@ export function ComposerAttachments({ items, busy, active, ready, uploadProgress
       progress={item.data && <ChatUploadProgress inline reconnecting={!ready}
         progress={itemUploadProgress(uploadProgress, 'attachment', index)} />} />;
     return <span className="chat-capsule" key={`${item.path}:${index}`}>
-      {item.kind === 'conversation' ? <MessageSquare size={14} /> : <File size={14} />}
-      <span title={item.name}>{item.kind === 'conversation' ? `@${item.name}` : item.name}</span>
+      {item.kind === 'ssh' ? <Terminal size={14} />
+        : item.kind === 'conversation' ? <MessageSquare size={14} /> : <File size={14} />}
+      <span title={item.name}>{item.kind === 'conversation' && '@'}{item.kind === 'ssh' && '!'}{item.name}</span>
       <button type="button" aria-label={t('client.chat.remove', { value1: item.name })}
         disabled={busy} onClick={() => remove(item)}><X size={14} /></button></span>;
   })}</div>;

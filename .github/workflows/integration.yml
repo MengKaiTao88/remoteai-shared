@@ -44,7 +44,10 @@ jobs:
         working-directory: host
       - run: npm run export:web && npm ci --prefix apps/web && npm run check:web
         working-directory: host
-      - run: npm run export:native && npm ci --prefix apps/native && npm --prefix apps/native run check
+      - name: Export Native dependencies and regenerate embedded assets
+        run: >-
+          npm run export:native && npm ci --prefix apps/native &&
+          npm --prefix apps/native run generate:assets && npm --prefix apps/native run check
         working-directory: host
       - name: Verify shared browser and protocol logic
         run: >-

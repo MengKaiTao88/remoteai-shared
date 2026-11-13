@@ -14,6 +14,11 @@ export function useGitHistoryScroll(panel: RemoteGit, connected: boolean) {
   const { setNearEnd, ...pagination } = useGitHistoryPagination(panel, connected, checkNearEnd);
 
   useEffect(() => {
+    if (list.current) { list.current.scrollTop = 0; list.current.scrollLeft = 0; }
+    setNearEnd(false);
+  }, [panel.historyRepository, setNearEnd]);
+
+  useEffect(() => {
     if (!list.current || !end.current) return;
     const observer = new IntersectionObserver(() => setNearEnd(checkNearEnd()), {
       root: list.current, rootMargin: `0px 0px ${GIT_HISTORY_LOAD_DISTANCE}px 0px`,

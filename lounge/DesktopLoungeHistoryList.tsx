@@ -57,7 +57,7 @@ function HistoryMessage({ message, state, props, format }: {
     <div className="lounge-history-message-main">
       <header className="lounge-history-message-heading"><LoungeSender user={message.sender} />
         <time dateTime={message.sentAt}>{format.format(new Date(message.sentAt))}</time></header>
-      <LoungeMessageBody message={message} preview={preview} actions={{ reply, direct: startDirect }}
+      <LoungeMessageBody history message={message} preview={preview} actions={{ reply, direct: startDirect }}
         controller={controller} locate={locate} />
     </div>
   </article>;

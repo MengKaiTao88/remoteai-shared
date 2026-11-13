@@ -22,6 +22,9 @@ import { synchronizedSnapshot } from './syncSnapshot';
 import { notificationSettingsUpdate, notificationUnread } from './notificationSettings';
 import { LoungeAttachmentManager } from './attachmentManager';
 import { ReconnectBackoff } from '../realtime/reconnectBackoff';
+import { parseClientVersion } from './clientVersion';
+import { LoungeGroupReadViewport, type GroupReadViewing, type GroupReadVisibility } from './groupReadViewport';
+import { LoungeDeletions } from './deletions';
 
 const HEARTBEAT_MS = 20_000;
 const STALE_MS = 65_000;
@@ -55,36 +58,54 @@ export class LoungeController {
   private readonly profiles: LoungeProfiles;
   private readonly delivery: LoungeDirectDelivery;
   private readonly transport = new LoungeDeliveryTransport();
+  private readonly groupViewport = new LoungeGroupReadViewport({
+    enabled: () => this.running && this.runtime.isVisible() && this.state.status === 'connected'
+      && this.state.groupReadsAvailable === true && !this.state.conversation,
+    read: messages => this.delivery.read(messages),
+  });
   private readonly accountLookup = new LoungeAccountLookup();
   private readonly contactSync: LoungeContactSync;
   private readonly deviceSync: LoungeDeviceSync;
+  private readonly deletions: LoungeDeletions;
+  private deletionWrites: Promise<void> = Promise.resolve();
+  private localReady = false;
+  private restoringLocal = false;
   readonly attachments: LoungeAttachmentManager;
 
   constructor(private readonly session?: LoungeSession, private readonly runtime: LoungeRuntime = browserLoungeRuntime) {
     this.backoff = new ReconnectBackoff({ maximumMs: 15_000, random: runtime.retryRandom });
     this.profiles = new LoungeProfiles(session?.avatars);
+    this.deletions = new LoungeDeletions(session?.history);
     this.attachments = new LoungeAttachmentManager({ session, randomId: runtime.randomId });
     this.state = { status: session ? 'connecting' : 'signed-out', messages: [], unread: 0,
       policy: { moderator: false, mutedUntil: null }, historyRevision: 0, historyError: false,
       contacts: [], blocked: [], directAvailable: false, conversation: '', unreadByConversation: {} };
-    this.deviceSync = new LoungeDeviceSync({ session, deviceId: runtime.randomId, flush: () => this.writes,
+    this.deviceSync = new LoungeDeviceSync({ session, deviceId: runtime.randomId,
+      flush: async () => { await this.deletionWrites; await this.writes; },
       restored: messages => this.restoreSynchronized(messages),
-      accept: message => isCurrentDirect(message, peer => this.directState.generation(peer)),
+      accept: message => this.isCurrentMessage(message),
+      deletions: { page: after => this.deletions.page(after),
+        apply: entries => this.applyDeletions(entries) },
       error: failed => { if (this.running) this.update({ deviceSyncError: failed }); } });
     this.contactSync = new LoungeContactSync({ snapshot: () => this.state, update: change => this.update(change),
       persist: contact => this.persistContact(contact), watch: () => this.syncWatch(),
       profile: user => this.profiles.user(user), account: session?.account,
+      deleted: peer => this.deletions.time(peer) > 0 && !this.state.contacts.some(value => value.direct
+        && value.user.id === peer),
       send: frame => this.state.status === 'connected' && this.transport.send(this.socket, frame) });
     this.delivery = new LoungeDirectDelivery({
       self: () => this.state.user,
       enabled: () => this.running && this.state.status === 'connected' && this.state.directAvailable,
+      groupEnabled: () => this.state.groupReadsAvailable === true,
       online: id => this.state.contacts.some(contact => contact.user.id === id && contact.online === true),
-      readable: message => this.canRead() && message.conversation === this.state.conversation,
+      readable: message => message.groupReceipt && !message.recipient ? this.groupViewport.readable(message)
+        : this.canRead() && message.conversation === this.state.conversation,
       allowed: message => this.allowDelivery(message),
       find: key => this.findMessage(key), page: query => query.pendingOnly && !this.session?.history?.get
         ? Promise.resolve({ messages: [] }) : this.searchHistory(query),
       permission: peer => this.directState.permission(peer),
       generation: peer => this.directState.generation(peer), ready: peer => this.directState.ready(peer),
+      createdAt: peer => Math.max(Date.now(), this.deletions.time(peer) + 1),
       publish: (message, fresh) => this.publishDirect(message, fresh),
       transmit: frame => this.state.status === 'connected' && this.transport.send(this.socket, frame),
       error: () => this.update({ historyError: true }),
@@ -126,18 +147,31 @@ export class LoungeController {
     if (this.running || !this.session) return;
     this.running = true;
     this.lifecycle++;
-    this.delivery.start();
-    void this.restoreHistory();
-    void this.restoreContacts();
     this.unsubscribe = this.runtime.subscribe(this.wake);
     this.heartbeat = setInterval(this.tick, HEARTBEAT_MS);
-    void this.connect();
+    void this.restoreLocalState();
+  }
+  private async restoreLocalState() {
+    if (this.restoringLocal || this.localReady) return;
+    this.restoringLocal = true;
+    const lifecycle = this.lifecycle;
+    const current = () => this.running && lifecycle === this.lifecycle;
+    try {
+      await this.deletions.restore(current);
+      if (!current()) return;
+      this.localReady = true;
+      this.update({ deletedConversations: this.deletions.snapshot(), historyError: false });
+      this.delivery.start();
+      void this.restoreHistory(); void this.restoreContacts(); void this.connect();
+    } catch { if (current()) this.update({ historyError: true }); }
+    finally { if (current()) this.restoringLocal = false; }
   }
   stop() {
     this.attachments.stop();
     this.deviceSync.stop();
     this.delivery.stop();
     this.running = false;
+    this.localReady = false; this.restoringLocal = false;
     this.lifecycle++;
     this.generation++;
     this.connecting = false;
@@ -148,32 +182,40 @@ export class LoungeController {
     this.disconnect();
     this.recent = [];
     this.directState.clear();
+    this.deletions.clear();
+    this.groupViewport.clear();
     this.profiles.clear();
     this.update({ messages: [], unread: 0, user: undefined, policy: { moderator: false, mutedUntil: null },
       status: this.session ? 'connecting' : 'signed-out', historyError: false, contactsSyncError: false,
       deviceSyncError: false,
+      groupReadsAvailable: false,
       onlineCount: undefined,
       contacts: [], blocked: [], directAvailable: false, directResetAvailable: false,
       accountLookupAvailable: false, namesAvailable: false,
       notificationSettingsAvailable: false, mutedConversations: [],
-      conversation: '', unreadByConversation: {} });
+      conversation: '', unreadByConversation: {}, deletedConversations: {} });
   }
   setViewing(viewing: boolean) { this.viewing = viewing; this.markRead(); }
+  setGroupViewing(viewing: GroupReadViewing) { this.groupViewport.setViewing(viewing); }
+  setGroupMessageVisible(visibility: GroupReadVisibility) { this.groupViewport.observe(visibility); }
+  setGroupReadOverlay(key: string, blocked: boolean) { this.groupViewport.overlay(key, blocked); }
   private canRead() { return this.viewing && this.runtime.isVisible(); }
   private allowDelivery(message: LoungeMessage) {
-    if (!isCurrentDirect(message, peer => this.directState.generation(peer))) return false;
+    if (!this.isCurrentMessage(message)) return false;
     if (message.conversation && !this.directState.ready(message.conversation)) return false;
     return message.delivery?.direction === 'incoming' ? !this.state.blocked.includes(message.sender.id)
       : !this.state.policy.mutedUntil || Date.parse(this.state.policy.mutedUntil) <= Date.now();
   }
   private markRead() {
-    if (this.canRead()) this.delivery.read(this.state.messages);
+    if (this.canRead()) this.delivery.read(this.state.messages.filter(message => !!message.recipient));
+    this.groupViewport.refresh();
     if (!this.canRead() || !this.state.unreadByConversation[this.state.conversation]) return;
     const unreadByConversation = { ...this.state.unreadByConversation, [this.state.conversation]: 0 };
     this.update({ unreadByConversation, unread: Object.values(unreadByConversation).reduce((sum, n) => sum + n, 0) });
   }
   private wake = () => {
     if (!this.running) return;
+    if (!this.localReady) { void this.restoreLocalState(); return; }
     this.deviceSync.retry();
     this.attachments.retryNow();
     this.markRead();
@@ -212,7 +254,9 @@ export class LoungeController {
       socket.onopen = () => {
         if (this.socket === socket) socket.send(JSON.stringify({
           type: 'authenticate', ticket: credentials.ticket, direct: true, receipts: true,
-          groupAcks: true, avatarCache: true }));
+          groupAcks: true, groupReads: true, avatarCache: true,
+          clientVersion: parseClientVersion(this.session?.clientVersion),
+          clientPlatform: this.session?.clientPlatform }));
       };
       socket.onmessage = event => { if (this.socket === socket) this.receive(event.data); };
       socket.onerror = () => { if (this.socket === socket) { this.disconnect(); this.schedule(); } };
@@ -228,7 +272,8 @@ export class LoungeController {
       const credentials = await authorize(this.session);
       if (socket !== this.socket || !this.running) return;
       socket.send(JSON.stringify({ type: 'authenticate', ticket: credentials.ticket,
-        direct: true, receipts: true, groupAcks: true, avatarCache: true }));
+        direct: true, receipts: true, groupAcks: true, groupReads: true, avatarCache: true,
+        clientVersion: parseClientVersion(this.session.clientVersion), clientPlatform: this.session.clientPlatform }));
       this.renewalStarted = Date.now();
     } catch { if (this.socket === socket) { this.disconnect(); this.schedule(); } }
     finally { this.renewing = false; }
@@ -265,6 +310,10 @@ export class LoungeController {
     }
     if (this.accountLookup.receive(frame)) return;
     if (this.contactSync.receive(frame)) return;
+    if (frame.type === 'client-versions') {
+      if (this.profiles.receiveVersions(frame.users)) this.update({});
+      return;
+    }
     if (frame.type === 'profiles') { this.receiveProfiles(frame.profiles); return; }
     if (frame.type === 'names') { this.receiveProfiles(frame, true); return; }
     if (frame.type === 'direct-permissions') { this.directState.receive(frame); return; }
@@ -276,7 +325,8 @@ export class LoungeController {
     }
     if (frame.type === 'privacy' || frame.type === 'ready') this.contactSync.privacy(frame.blocked);
     if (frame.type === 'contacts') this.contactSync.presence(frame.contacts);
-    if (frame.type === 'receipt' || frame.type === 'receipt-confirm') {
+    if (frame.type === 'receipt' || frame.type === 'receipt-confirm'
+      || frame.type === 'group-read' || frame.type === 'group-read-confirm' || frame.type === 'group-receipt-rejected') {
       this.delivery.receipt(frame); return;
     }
     if (frame.type === 'moderated' || frame.type === 'updated' || frame.type === 'rejected') {
@@ -299,6 +349,7 @@ export class LoungeController {
       this.directState.resetAvailable = frame.directReset === true;
       this.update({ status: 'connected', user, historyRevision: this.state.historyRevision + 1,
         attachmentsAvailable: frame.attachments === true,
+        groupReadsAvailable: frame.groupReads === true,
         directAvailable: frame.direct === true && frame.receipts === true,
         accountLookupAvailable: frame.accountLookup === true,
         namesAvailable: frame.names === true,
@@ -312,9 +363,10 @@ export class LoungeController {
     if (!message || this.state.status !== 'connected') return;
     if (message.recipient && !this.directState.accept(message,
       messageConversation(message, this.state.user?.id ?? ''))) return;
-    if (message.recipient && message.receipts) {
+    if (message.recipient && message.receipts || message.groupReceipt && this.state.groupReadsAvailable) {
       const own = message.sender.id === this.state.user?.id;
-      if (this.state.blocked.includes(message.sender.id) || !own && message.recipient.id !== this.state.user?.id) return;
+      if (this.state.blocked.includes(message.sender.id)
+        || !own && message.recipient && message.recipient.id !== this.state.user?.id) return;
       this.attachments.prefetch(message.attachments);
       this.delivery.receive({ ...message, delivery: undefined,
         conversation: messageConversation(message, this.state.user?.id ?? '') });
@@ -329,6 +381,7 @@ export class LoungeController {
     this.attachments.prefetch(message.attachments);
     const conversation = messageConversation(message, this.state.user?.id ?? '');
     message = { ...message, conversation: conversation || undefined };
+    if (!this.isCurrentMessage(message)) return;
     if (own) this.submissions.finish(message.id);
     if (this.recent.some(item => item.id === message.id && item.sender.id === message.sender.id)) return;
     this.recent = recentMessages([...this.recent, message]);
@@ -363,11 +416,14 @@ export class LoungeController {
   private async findMessage(key: string) {
     await this.writes;
     const memory = [...this.state.messages, ...this.recent].find(message => historyKey(message) === key);
-    return await this.session?.history?.get?.(key) ?? memory;
+    const message = await this.session?.history?.get?.(key) ?? memory;
+    return message && this.isCurrentMessage(message) ? message : undefined;
   }
   retryDeviceSync() { this.deviceSync.retry(); }
   private restoreSynchronized(messages: LoungeMessage[]) {
     if (!this.running) return;
+    messages = messages.filter(message => this.isCurrentMessage(message));
+    this.delivery.restoreGroups(messages);
     const merged = synchronizedSnapshot(this.state, messages, this.recent);
     this.recent = merged.recent; this.update(merged.change);
     for (const message of messages) {
@@ -378,7 +434,7 @@ export class LoungeController {
     this.markRead();
   }
   private async publishDirect(message: LoungeMessage, fresh: boolean) {
-    if (!isCurrentDirect(message, peer => this.directState.generation(peer))) return;
+    if (!this.isCurrentMessage(message)) return;
     if (fresh) this.append(message);
     else {
       const replace = (previous: LoungeMessage) => historyKey(previous) === historyKey(message) ? message : previous;
@@ -395,6 +451,7 @@ export class LoungeController {
     const epoch = this.historyEpoch;
     try {
       const page = await store.page({ query: '', limit: RECENT_MESSAGE_LIMIT, conversation });
+      page.messages = page.messages.filter(message => this.isCurrentMessage(message));
       if (!this.running || lifecycle !== this.lifecycle || conversation !== this.state.conversation
         || epoch !== this.historyEpoch) return;
       const restoredUser = this.state.user ?? page.messages.flatMap(message => [message.sender, message.recipient])
@@ -416,7 +473,8 @@ export class LoungeController {
     if (!options.committedOnly) await this.writes;
     if (this.session?.history) {
       const page = await this.session.history.page(query);
-      return { ...page, messages: page.messages.map(this.profiles.message) };
+      return { ...page, messages: page.messages.filter(message => this.isCurrentMessage(message))
+        .map(this.profiles.message) };
     }
     const recent = recentMessages([...this.recent, ...this.state.messages]);
     const matches = searchLoungeHistory(recent, query.query).filter(message => {
@@ -438,9 +496,11 @@ export class LoungeController {
     const key = JSON.stringify([reference.senderId, reference.id]);
     const message = [...this.state.messages, ...this.recent].find(item => historyKey(item) === key)
       ?? await this.session?.history?.get?.(key);
-    return message && (message.conversation ?? '') === conversation ? this.profiles.message(message) : undefined;
+    return message && this.isCurrentMessage(message) && (message.conversation ?? '') === conversation
+      ? this.profiles.message(message) : undefined;
   }
   async retryHistory() {
+    if (!this.localReady) { await this.restoreLocalState(); return; }
     await this.writes;
     const lifecycle = this.lifecycle;
     const failures = this.historyFailures;
@@ -509,20 +569,43 @@ export class LoungeController {
   }
   async deleteContact(userId: string) {
     const store = this.session?.history;
-    if (!this.state.directResetAvailable || !userId || userId === this.state.user?.id
-      || store && !store.deleteConversation) throw new Error('client.lounge.deleteFailed');
+    if (!userId || userId === this.state.user?.id || store && !store.deleteBefore) {
+      throw new Error('client.lounge.deleteFailed');
+    }
+    const lastMessageAt = this.state.contacts.find(contact => contact.user.id === userId)?.lastMessageAt ?? 0;
+    const deletedAt = Math.max(Date.now(), this.deletions.time(userId) + 1, lastMessageAt);
+    await this.applyDeletions({ [userId]: deletedAt });
+  }
+  private isCurrentMessage(message: LoungeMessage) {
+    return this.deletions.accepts(message) && isCurrentDirect(message, peer => this.directState.generation(peer));
+  }
+  private applyDeletions(entries: Record<string, number>) {
     const lifecycle = this.lifecycle;
-    const previousGeneration = this.directState.generation(userId);
-    await this.submit({ type: 'delete-direct', userId });
-    const generation = this.directState.generation(userId);
-    if (generation <= previousGeneration) throw new Error('client.lounge.deleteFailed');
+    const operation = this.deletionWrites.then(async () => {
+      let changed = false;
+      for (const [peer, time] of Object.entries(entries)) {
+        if (lifecycle !== this.lifecycle) return;
+        if (time <= this.deletions.time(peer)) continue;
+        await this.removeBefore(peer, time, lifecycle);
+        changed = true;
+      }
+      if (changed) this.deviceSync.deleted();
+    });
+    this.deletionWrites = operation.catch(() => { /* Each caller receives the failure; allow a later retry. */ });
+    return operation;
+  }
+  private async removeBefore(userId: string, deletedAt: number, lifecycle: number) {
     await this.delivery.remove(userId, async () => {
       await this.writes;
       if (lifecycle !== this.lifecycle) throw new Error('client.lounge.deleteFailed');
-      await store?.deleteConversation?.(userId, generation);
+      await this.session?.history?.deleteBefore?.(userId, deletedAt);
+      if (lifecycle !== this.lifecycle) return;
+      this.deletions.remember(userId, deletedAt);
       this.historyEpoch++;
-      const removed = removedConversation({ state: this.state, peer: userId, generation, recent: this.recent });
-      this.recent = removed.recent; this.update(removed.snapshot); this.syncWatch();
+      const removed = removedConversation({ state: this.state, peer: userId, deletedAt, recent: this.recent });
+      this.recent = removed.recent;
+      this.update({ ...removed.snapshot, deletedConversations: this.deletions.snapshot() }); this.syncWatch();
+      if (!this.state.conversation) void this.restoreHistory();
     });
   }
   retryContacts() { this.contactSync.retry(); }

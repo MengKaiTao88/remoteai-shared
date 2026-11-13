@@ -71,13 +71,14 @@ export function MobileLoungeThread({ model, controller, mention }: {
             <LoungeMessageBody mobile showDelivery={false} message={message}
               preview={model.setPreview} onImageLoad={scrollBottom}
               controller={controller} locate={model.locate}
-              actions={{ reply: model.quote, blocked: state.blocked.includes(message.sender.id),
+              actions={{ reply: model.quote, profile: !own ? () => model.setProfile(message.sender) : undefined,
+                blocked: state.blocked.includes(message.sender.id),
                 direct: !own && state.directAvailable ? () => model.select(message.sender) : undefined,
                 block: !own && state.directAvailable ? () => model.setBlocking(message.sender) : undefined }} />
             <footer className="lounge-message-footer">
               <time className="lounge-message-time" dateTime={message.sentAt}>
                 {new Date(message.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
-              <LoungeDeliveryStatus delivery={message.delivery} />
+              <LoungeDeliveryStatus delivery={message.delivery} message={message} controller={controller} />
             </footer>
           </div>
         </article>;

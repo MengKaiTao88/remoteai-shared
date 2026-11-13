@@ -1,5 +1,5 @@
 import { Checkbox } from 'antd';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, GitFork } from 'lucide-react';
 import fileIcon from '../../remote-chat/assets/git-icons/file-v2.png';
 import folderIcon from '../../remote-chat/assets/git-icons/folder-v2.png';
 import { selectionState } from '../../remote-chat/gitFiles';
@@ -9,7 +9,10 @@ import { gitAreaColors } from './gitTheme';
 import { GitFileMenu } from './GitFileMenu';
 import { GitCommitForm } from './GitCommitForm';
 import { GitConflicts } from './GitConflicts';
+import { GitVirtualList } from './GitVirtualList';
 import { t } from '../../localization/browserClient';
+
+const rowKey = (row: GitFileRow) => row.id;
 
 export function GitChanges({ panel, connected }: { panel: RemoteGit; connected: boolean }) {
   const files = panel.changes?.files ?? [];
@@ -21,15 +24,15 @@ export function GitChanges({ panel, connected }: { panel: RemoteGit; connected: 
     <div className="git-selection"><Checkbox disabled={panel.busy || !files.some(file => !file.conflict)}
       checked={all === true} indeterminate={all === 'mixed'} onChange={panel.selectAll}>{t("client.projectBrowser.selectAll")}</Checkbox>
       <span>{t("client.git.filesSelected", { count })}</span>
-      <div className="git-view-toggle" aria-label={t("client.git.fileView")}>
+      {!panel.changes?.repositories?.length && <div className="git-view-toggle" aria-label={t("client.git.fileView")}>
         {(['tree', 'flat'] as const).map(mode => <button key={mode} type="button" aria-pressed={list.mode === mode}
           onClick={() => list.setMode(mode)}>{t(mode === 'tree' ? "client.git.folders" : "client.git.flat")}</button>)}
-      </div></div>
-    <div className="git-files">
-      {panel.changes && !files.length && <p className="git-notice">{t("client.git.thereAreNoUncommittedChanges")}</p>}
-      {list.rows.map(row => <GitRow key={row.id} row={row} panel={panel} connected={connected}
-        onToggle={() => list.toggleFolder(row.id)} flat={list.mode === 'flat'} />)}
-    </div>
+      </div>}</div>
+    <GitVirtualList items={list.rows} itemKey={rowKey} role="tree" label={t('client.git.gitRepository')}
+      empty={panel.changes && <p className="git-notice">{t("client.git.thereAreNoUncommittedChanges")}</p>}>
+      {row => <GitRow row={row} panel={panel} connected={connected}
+        onToggle={() => list.toggleFolder(row.id)} flat={list.mode === 'flat'} />}
+    </GitVirtualList>
     {!panel.changes?.integration && <GitCommitForm panel={panel} />}
   </>;
 }
@@ -43,6 +46,8 @@ function GitRow({ row, panel, connected, onToggle, flat }: {
   const colors = gitAreaColors(row.area.id);
   return <GitFileMenu row={row} panel={panel} connected={connected}>
     <div className={`git-file git-file-${row.kind}`} data-area={row.area.id}
+      role={area ? undefined : 'treeitem'} aria-level={area ? undefined : row.depth + 1}
+      aria-expanded={folder ? !row.collapsed : undefined}
     style={{ color: colors.color, background: !area && checked === true ? colors.background : undefined }}>
     <Checkbox aria-label={t("client.git.select", { path: area ? t(row.area.label) : row.path })} checked={checked === true}
       indeterminate={checked === 'mixed'} disabled={panel.busy || !row.files.some(file => !file.conflict)}
@@ -60,9 +65,11 @@ function GitRow({ row, panel, connected, onToggle, flat }: {
         }}>
         {!flat && <span className="git-tree-chevron">{folder && (row.collapsed
           ? <ChevronRight size={12} /> : <ChevronDown size={12} />)}</span>}
-        <img src={folder ? folderIcon : fileIcon} className="git-tree-icon" alt="" aria-hidden="true" />
+        {row.repository ? <GitFork size={16} aria-hidden="true" />
+          : <img src={folder ? folderIcon : fileIcon} className="git-tree-icon" alt="" aria-hidden="true" />}
         <span className="git-file-name">{row.name}
           {flat && row.path !== row.name && <small>{row.path}</small>}
+          {row.repository && !row.repository.available && <small>{t('client.git.thisFolderIsNotAGitRepository')}</small>}
           {row.file?.originalPath && <small>{row.file.originalPath} → {row.path}</small>}</span>
         <span className="git-status" style={{ background: folder ? undefined : colors.background }}>
           {folder ? row.files.length : row.file?.status.trim()}</span>

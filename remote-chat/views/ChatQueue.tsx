@@ -11,7 +11,7 @@ export function ChatQueue({ messages, running, disabled, act, edit, editDisabled
   useLanguage();
   const { selected, select, canMoveUp, canMoveDown } = useQueueSelection(messages, disabled);
   if (!messages.length) return null;
-  const sending = messages.some((message) => message.busy);
+  const sending = messages.some((message) => message.busy || message.local);
   return <section className="chat-queue" aria-label={t("client.chat.queuedMessages")}>
     <div className="chat-queue-heading"><span>{t("client.chat.queued")} {messages.length}</span>
       <div className="chat-queue-actions">
@@ -34,7 +34,7 @@ export function ChatQueue({ messages, running, disabled, act, edit, editDisabled
         {message.busy && <small role="status">{t("client.chat.sending")}</small>}
         {message.error && <small role="alert" className="chat-queue-error">{displayError(message.error)}</small>}
       </div>
-      <button type="button" disabled={disabled || sending} onPointerDown={(event) => event.preventDefault()}
+      <button type="button" disabled={disabled || sending || message.local} onPointerDown={(event) => event.preventDefault()}
         onClick={() => void act('queueSendNow', message.id)}>{t("client.chat.sendNow")}</button>
       <button type="button" aria-label={t("client.chat.deleteQueuedMessage")} disabled={disabled || message.busy}
         onPointerDown={(event) => event.preventDefault()} onClick={() => void act('queueRemove', message.id)}>

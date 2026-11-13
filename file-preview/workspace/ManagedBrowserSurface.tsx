@@ -11,13 +11,33 @@ export function WebsiteBrowserSurface(props: BrowserSurfaceProps) {
   return props.tab.automationThread ? <ManagedBrowserSurface {...props} /> : <ProviderBrowserSurface {...props} />;
 }
 
-function ManagedBrowserSurface({ tab, active, onNavigate, t }: BrowserSurfaceProps) {
+function ManagedBrowserSurface({ tab, active, onNavigate, onLoadingChange, t }: BrowserSurfaceProps) {
   const client = useContext(BrowserClientContext);
   const host = useRef<HTMLDivElement>(null);
-  const current = useRef({ active, onNavigate }); current.current = { active, onNavigate };
+  const current = useRef({ active, onNavigate, onLoadingChange });
+  current.current = { active, onNavigate, onLoadingChange };
   const [image, setImage] = useState('');
   const [failed, setFailed] = useState(false);
   const refresh = useRef<() => void>();
+  useEffect(() => {
+    let disposed = false;
+    let receivedLoading = false;
+    const listener = client.subscribe(event => {
+      if (!disposed && event.type === 'loading' && event.tabId === tab.id && event.threadId === tab.automationThread) {
+        receivedLoading = true;
+        current.current.onLoadingChange?.(event.loading);
+      }
+    });
+    void client.request({ threadId: tab.automationThread!, command: { action: 'list' } })
+      .then(reply => {
+        if (!disposed && !receivedLoading) {
+          current.current.onLoadingChange?.(Boolean(reply.tabs?.find(entry => entry.id === tab.id)?.loading));
+        }
+      })
+      .catch(error => console.debug('Browser loading state unavailable', error));
+    void listener.catch(error => console.debug('Browser loading subscription unavailable', error));
+    return () => { disposed = true; void listener.then(stop => stop()).catch(() => {}); };
+  }, [client, tab.id, tab.automationThread]);
   useEffect(() => {
     if (!client.native || !host.current) return;
     const element = host.current;
@@ -47,7 +67,7 @@ function ManagedBrowserSurface({ tab, active, onNavigate, t }: BrowserSurfacePro
     window.addEventListener('resize', sync); window.addEventListener('scroll', sync, true);
     document.addEventListener('visibilitychange', sync);
     const listener = listen<{ url: string; popup?: boolean }>(`conversation-browser-${tab.id}`, ({ payload }) => {
-      if (!payload.popup) current.current.onNavigate(payload.url);
+      if (!payload.popup && payload.url) current.current.onNavigate(payload.url);
     });
     void listener.catch(() => setFailed(true)); sync();
     return () => {
@@ -74,6 +94,7 @@ function ManagedBrowserSurface({ tab, active, onNavigate, t }: BrowserSurfacePro
         const image = reply.result?.image;
         if (image) { setImage(`data:${image.mimeType};base64,${image.data}`); setFailed(false); }
         if (reply.result?.url) current.current.onNavigate(reply.result.url);
+        if (typeof reply.result?.loading === 'boolean') current.current.onLoadingChange?.(reply.result.loading);
       } catch { if (!stopped) setFailed(true); }
       finally { if (!stopped) timer = setTimeout(() => { void read(); }, 700); }
     };

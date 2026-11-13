@@ -6,6 +6,7 @@ import { connectionHealth, healthStatusLabels, HEALTH_INLINE_STATUS_MAX_CHARACTE
   type HealthStep } from '../connectionHealth';
 import type { ChatState } from './types';
 import { ChatConnectionAddresses } from './ChatConnectionAddresses';
+import { useChatSurfaceTheme } from './useChatSurfaceTheme';
 import './connection-health.css';
 
 const stepIcons = { login: User, computer: Monitor, path: Share2, chat: MessageSquare };
@@ -15,10 +16,11 @@ export function ChatConnectionHealth({ state, device, reconnect, close }: {
   state: ChatState; device?: { online: boolean }; reconnect: () => void; close: () => void;
 }) {
   useLanguage();
+  const surfaceTheme = useChatSurfaceTheme();
   const health = connectionHealth(state, device);
   const StatusIcon = statusIcons[health.status];
   return <AdaptiveSheet open title={t("client.chatReliability.connectionCheck")} subtitle={t("client.chatReliability.checkTheConnectionBetweenThisDeviceAndYourComputer")}
-    onClose={close} width={680} className="connection-health-sheet">
+    onClose={close} width={680} className="connection-health-sheet" style={surfaceTheme}>
     <div className="connection-health">
       <div className={`connection-health-summary health-${health.status}`} aria-live="polite">
         <span className="connection-health-summary-icon"><StatusIcon size={22} aria-hidden="true" /></span>

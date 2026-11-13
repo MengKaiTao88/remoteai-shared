@@ -9,6 +9,7 @@ const DATABASE = 'remoteai-lounge-history-v1';
 const META = 'metadata';
 const CONTENT = 'content';
 const CONTACTS = 'contacts';
+const DELETIONS = 'deletions';
 interface Metadata {
   scope: string; key: string; time: number; search: string; conversation?: string; pending?: boolean; generation?: number;
 }
@@ -16,7 +17,7 @@ let opening: Promise<IDBDatabase> | undefined;
 
 function openDatabase(): Promise<IDBDatabase> {
   return opening ??= new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open(DATABASE, 2);
+    const request = indexedDB.open(DATABASE, 3);
     let blocked = false;
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(META)) {
@@ -24,7 +25,10 @@ function openDatabase(): Promise<IDBDatabase> {
         metadata.createIndex('timeline', ['scope', 'time', 'key']);
         request.result.createObjectStore(CONTENT);
       }
-      request.result.createObjectStore(CONTACTS, { keyPath: ['scope', 'id'] });
+      if (!request.result.objectStoreNames.contains(CONTACTS)) {
+        request.result.createObjectStore(CONTACTS, { keyPath: ['scope', 'id'] });
+      }
+      request.result.createObjectStore(DELETIONS, { keyPath: ['scope', 'peer'] });
     };
     request.onsuccess = () => {
       const database = request.result;
@@ -47,7 +51,7 @@ function complete(transaction: IDBTransaction) {
 
 async function save(scope: string, message: LoungeMessage) {
   const database = await openDatabase();
-  const transaction = database.transaction([META, CONTENT], 'readwrite');
+  const transaction = database.transaction([META, CONTENT, DELETIONS], 'readwrite');
   const finished = complete(transaction);
   const key = historyKey(message);
   const content = transaction.objectStore(CONTENT);
@@ -56,10 +60,13 @@ async function save(scope: string, message: LoungeMessage) {
       conversation: message.conversation ?? '', pending: needsDeliveryWork(delivery), generation: message.generation });
     content.put({ ...message, delivery }, [scope, key]);
   };
-  if (message.delivery) {
+  const deletion = transaction.objectStore(DELETIONS).get([scope, message.conversation ?? '']);
+  deletion.onsuccess = () => {
+    if (Date.parse(message.sentAt) <= (deletion.result?.deletedAt ?? 0)) return;
+    if (!message.delivery) { write(); return; }
     const previous = content.get([scope, key]);
     previous.onsuccess = () => write(mergeDelivery(parseMessage(previous.result)?.delivery, message.delivery));
-  } else write();
+  };
   await finished;
 }
 
@@ -99,7 +106,42 @@ export function browserLoungeHistory(baseUrl: string, account: string): LoungeHi
   const scope = historyScope(baseUrl, account);
   return { save: message => save(scope, message), page: query => search(scope, query),
     contacts: () => contacts(scope), saveContact: contact => saveContact(scope, contact),
-    get: key => get(scope, key), deleteConversation: (peer, generation) => deleteConversation(scope, peer, generation) };
+    get: key => get(scope, key), deleteConversation: (peer, generation) => deleteConversation(scope, peer, generation),
+    deletions: () => deletions(scope), deleteBefore: (peer, time) => deleteBefore(scope, peer, time) };
+}
+
+async function deletions(scope: string) {
+  const db = await openDatabase();
+  const tx = db.transaction(DELETIONS); const done = complete(tx);
+  const request = tx.objectStore(DELETIONS).getAll(IDBKeyRange.bound([scope, ''], [scope, []]));
+  let times: Record<string, number> = {};
+  request.onsuccess = () => { times = Object.fromEntries(request.result.map(row => [row.peer, row.deletedAt])); };
+  await done; return times;
+}
+
+/** Persist the tombstone and remove content atomically, including delayed writes from another tab. */
+async function deleteBefore(scope: string, peer: string, time: number) {
+  const db = await openDatabase();
+  const tx = db.transaction([DELETIONS, META, CONTENT, CONTACTS], 'readwrite'); const done = complete(tx);
+  const store = tx.objectStore(DELETIONS);
+  const previous = store.get([scope, peer]);
+  previous.onsuccess = () => {
+    const deletedAt = Math.max(time, previous.result?.deletedAt ?? 0);
+    store.put({ scope, peer, deletedAt });
+    let retained = false;
+    const cursor = tx.objectStore(META).openCursor(IDBKeyRange.bound([scope, ''], [scope, []]));
+    cursor.onsuccess = () => {
+      const row = cursor.result;
+      if (!row) { if (!retained) tx.objectStore(CONTACTS).delete([scope, peer]); return; }
+      const metadata = row.value as Metadata;
+      if (metadata.conversation === peer) {
+        if (metadata.time <= deletedAt) { tx.objectStore(CONTENT).delete([scope, metadata.key]); row.delete(); }
+        else retained = true;
+      }
+      row.continue();
+    };
+  };
+  await done;
 }
 
 async function deleteConversation(scope: string, peer: string, generation = Number.MAX_SAFE_INTEGER) {

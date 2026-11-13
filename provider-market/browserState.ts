@@ -11,7 +11,7 @@ export interface BrowserTab {
   /** Present only for conversation-owned tabs controlled by the built-in browser tools. */
   automationThread?: string;
 }
-export type BrowserAction = 'back' | 'forward' | 'reload';
+export type BrowserAction = 'back' | 'forward' | 'reload' | 'stop';
 
 export function createBrowserTab(source?: { name: string; marketSource: ProviderMarketSource }): BrowserTab {
   const url = source ? resolvedPageUrl(source.marketSource.page) : '';

@@ -13,6 +13,7 @@ export function useDetailsPanel({ selected, enabled, active, remoteFiles = false
   const [entry, setEntry] = useState<DiffPanelEntry | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [viewId, setViewId] = useState(0);
+  const [hasConversationChanges, setHasConversationChanges] = useState(false);
   const changes = useRef(EMPTY_CHANGES);
   const rememberOpener = drawer.rememberOpener;
   const openTab = drawer.open;
@@ -24,7 +25,7 @@ export function useDetailsPanel({ selected, enabled, active, remoteFiles = false
     if (diff) setViewId(value => value + 1);
   }, [openTab]);
   const revealPreview = useCallback(() => reveal(false), [reveal]);
-  const { preview, websites, navigation, hasFileHistory, openFile, openRemoteFile, openWebsite,
+  const { preview, websites, navigation, hasFileHistory, openFile, openRemoteFile, openWebsite, openBrowser,
     openManagedWebsite, openResource, cancel, reset }
     = usePreviewHistory({
     onOpen: rememberOpener, onNavigate: revealPreview,
@@ -36,7 +37,7 @@ export function useDetailsPanel({ selected, enabled, active, remoteFiles = false
   useManagedBrowserTabs({ threadId: selected, active: enabled && active,
     open: openManagedWebsite, close: closeManagedWebsite });
   const visible = drawer.visible && enabled
-    && Boolean((showingChanges && entry) || (drawer.selected === "preview" && preview));
+    && Boolean((showingChanges && entry?.files.length) || (drawer.selected === "preview" && preview));
   const open = useCallback((next: DiffPanelEntry) => {
     cancel(); rememberOpener(); setEntry(next); reveal(true);
   }, [cancel, rememberOpener, reveal]);
@@ -44,7 +45,10 @@ export function useDetailsPanel({ selected, enabled, active, remoteFiles = false
     setEntry(current => current?.id === next.id ? { ...next,
       filePath: next.files.some(file => file.path === current.filePath) ? current.filePath : undefined } : current);
   }, []);
-  const setConversationChanges = useCallback((next: DiffPanelEntry) => { changes.current = next; }, []);
+  const setConversationChanges = useCallback((next: DiffPanelEntry) => {
+    changes.current = next;
+    setHasConversationChanges(next.files.length > 0);
+  }, []);
   const close = useCallback(() => {
     cancel(); hide();
   }, [cancel, hide]);
@@ -60,7 +64,8 @@ export function useDetailsPanel({ selected, enabled, active, remoteFiles = false
     openRemoteFile: remoteFiles ? openRemoteFile : undefined, visible, showingChanges }),
   [open, update, close, openFile, openRemoteFile, remoteFiles, openWebsite, openResource, setConversationChanges,
     visible, showingChanges]);
-  return { context, entry, preview, websites, navigation, hasFileHistory, showingChanges, visible, viewId, expanded, setExpanded,
-    showChanges: () => { if (!entry) setEntry(changes.current); cancel(); openTab("changes"); },
+  return { context, entry, preview, websites, navigation, hasFileHistory, openBrowser, hasConversationChanges,
+    showingChanges, visible, viewId, expanded, setExpanded,
+    showChanges: () => { if (!entry?.files.length) setEntry(changes.current); cancel(); openTab("changes"); },
     showPreview: () => { cancel(); openTab("preview"); } };
 }

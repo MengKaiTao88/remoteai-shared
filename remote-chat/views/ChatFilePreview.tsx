@@ -1,7 +1,8 @@
 import { displayError } from '../../localization/browserClient';
 import { t, useLanguage } from '../../localization/browserClient';
 import { useEffect, useState } from 'react';
-import { Maximize, Minimize } from 'lucide-react';
+import { Grid } from 'antd';
+import { Code2, Eye } from 'lucide-react';
 import { AdaptiveSheet } from '../../layout/AdaptiveSheet';
 import { isMarkdownPath, type TextPreview } from '../textPreview';
 import type { FileClient } from '../fileDownload';
@@ -22,6 +23,8 @@ import { PreviewTransferProgress } from '../../chat/PreviewTransferProgress';
 import { ChatDownloadFile, isDownloadOnlyFile } from './ChatDownloadFile';
 import { ChatFileContext } from './ChatFileLink';
 import { filePreviewError } from '../fileErrors';
+import { filePreviewKind } from '../../file-preview/kinds';
+import { ChatPdfBrowser } from './ChatPdfBrowser';
 import './filePreview.css';
 
 export interface FilePreviewContext {
@@ -29,7 +32,9 @@ export interface FilePreviewContext {
   basePath?: string;
   load?: (threadId: string, path: string, options?: PreviewLoadOptions) => Promise<TextPreview>;
 }
-function TextFile({ path, context, line }: { path: string; context: FilePreviewContext; line?: number }) {
+function TextFile({ path, context, line, source }: {
+  path: string; context: FilePreviewContext; line?: number; source?: boolean;
+}) {
   useLanguage();
   const [result, setResult] = useState<TextPreview>();
   const [error, setError] = useState('');
@@ -49,9 +54,9 @@ function TextFile({ path, context, line }: { path: string; context: FilePreviewC
   if (error) return <p className="chat-file-preview-note" role="status">{displayError(error)}</p>;
   if (!result) return <PreviewTransferProgress progress={progress} label={t("client.chat.loadingFile")} />;
   return <>{line && <p className="chat-muted">{t("client.shared.referencedLine", { line })}</p>}
-    {isHtmlPath(path) ? <ChatHtmlPreview text={result.text} path={result.path}
+    {isHtmlPath(path) ? <ChatHtmlPreview text={result.text} path={result.path} source={source}
       client={context.client} threadId={context.threadId!} />
-      : isMarkdownPath(path) ? <ChatMarkdownPreview text={result.text} />
+      : isMarkdownPath(path) ? <ChatMarkdownPreview text={result.text} source={source} />
       : isJsonPath(path) ? <><ChatCopyButton text={result.text} label={t('client.chat.copyFileContents')} />
         <JsonPreview text={result.text} size={result.size} line={line} /></>
       : <ChatCodeBlock text={result.text} language={path.split('.').at(-1)} label={path.split(/[\\/]/).at(-1)}
@@ -83,17 +88,20 @@ function VideoFile({ path, context }: { path: string; context: FilePreviewContex
   return <video controls playsInline src={url} style={{ width: '100%', maxHeight: '60dvh' }}
     onError={() => setError(t("client.chat.yourBrowserCannotPlayThisFormatDownloadTheVideoTo"))} />;
 }
-export function ChatFilePreviewContent({ path, line, context }: {
-  path: string; line?: number; context: FilePreviewContext;
+export function ChatFilePreviewContent({ path, line, context, active = true, showDownload = true, source }: {
+  path: string; line?: number; context: FilePreviewContext; active?: boolean; showDownload?: boolean;
+  source?: boolean;
 }) {
   useLanguage();
+  if (filePreviewKind(path) === 'pdf') return <ChatPdfBrowser path={path} context={context} active={active} />;
   const image = /\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(path);
   return <ChatFileContext.Provider value={{ ...context, basePath: path }}>
     <div className="chat-detail-stack">
-      {localImageSource(path) ? <ImageFileDownload path={path} /> : <FileDownloadButton path={path} context={context} />}
+      {showDownload && (localImageSource(path) ? <ImageFileDownload path={path} />
+        : <FileDownloadButton path={path} context={context} />)}
       {image ? <ChatImage source={path} description={t("client.projectBrowser.filePreview")} />
       : isVideoPath(path) ? <VideoFile path={path} context={context} />
-        : <TextFile key={path} path={path} context={context} line={line} />}</div>
+        : <TextFile key={path} path={path} context={context} line={line} source={source} />}</div>
   </ChatFileContext.Provider>;
 }
 
@@ -101,16 +109,26 @@ export function ChatFilePreview({ path, line, context, onClose }: {
   path: string; line?: number; context: FilePreviewContext; onClose: () => void;
 }) {
   useLanguage();
-  const [fullscreen, setFullscreen] = useState(false);
+  const screens = Grid.useBreakpoint();
+  const mobile = !screens.md;
+  const [source, setSource] = useState(false);
+  const modeLabel = source ? t('client.chat.preview')
+    : t(isHtmlPath(path) ? 'client.downloads.source' : 'client.chat.source');
+  if (filePreviewKind(path) === 'pdf') return <ChatPdfBrowser path={path} context={context} onClose={onClose} />;
   if (isDownloadOnlyFile(path)) return <ChatDownloadFile path={path} context={context} onClose={onClose} />;
   return <AdaptiveSheet open truncateTitle title={path.split(/[\\/]/).at(-1) || t("client.projectBrowser.filePreview")}
-    className="chat-file-preview-sheet" mobileFullscreen={fullscreen}
-    titleAction={<button type="button" className="sheet-close chat-file-fullscreen-toggle"
-      aria-label={t(fullscreen ? 'client.projectBrowser.exitFullscreen' : 'client.projectBrowser.enterFullscreen')}
-      onClick={() => setFullscreen(value => !value)}>
-      {fullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-    </button>}
+    className="chat-file-preview-sheet" mobileFullscreen
+    titleAction={mobile && <div className="chat-file-preview-actions">
+      {(isHtmlPath(path) || isMarkdownPath(path)) && <button type="button"
+        className="sheet-close chat-file-preview-mode" aria-label={modeLabel} title={modeLabel}
+        disabled={!context.ready || !context.threadId} onClick={() => setSource(value => !value)}>
+        {source ? <Eye size={20} aria-hidden="true" /> : <Code2 size={20} aria-hidden="true" />}
+      </button>}
+      {localImageSource(path) ? <ImageFileDownload path={path} compact />
+        : <FileDownloadButton path={path} context={context} compact />}
+    </div>}
     width={800} onClose={onClose}>
-    <ChatFilePreviewContent path={path} line={line} context={context} />
+    <ChatFilePreviewContent path={path} line={line} context={context} showDownload={!mobile}
+      source={mobile ? source : undefined} />
   </AdaptiveSheet>;
 }

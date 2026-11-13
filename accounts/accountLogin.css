@@ -1,0 +1,17 @@
+.account-login-heading { display: grid; gap: 17px; padding-bottom: 7px; }
+.account-login-key { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; }
+.account-login-choice { width: 100%; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center; gap: 11px; text-align: left; padding: 12px; margin-top: 9px;
+  border: 1px solid var(--account-login-border); border-radius: 11px;
+  background: var(--account-login-background); font-family: inherit; cursor: pointer;
+  transition: border-color .16s ease; }
+.account-login-choice:hover:not(:disabled) { border-color: var(--account-login-hover-border); }
+.account-login-choice:focus-visible { outline: 2px solid var(--account-login-accent); outline-offset: 2px; }
+.account-login-choice:disabled { cursor: not-allowed; opacity: .65; }
+.account-login-choice-icon { width: 38px; height: 38px; display: grid; place-items: center;
+  color: var(--account-login-accent); border-radius: 9px; background: var(--account-login-soft); }
+.account-login-choice-copy { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.account-login-choice small { color: var(--account-login-description); font-size: var(--account-login-secondary-size); }
+.account-login-choice > svg { color: var(--account-login-description); }
+.claude-browser-manual { display: grid; gap: 8px; margin-top: 12px; }
+.claude-browser-manual p { margin: 0; }

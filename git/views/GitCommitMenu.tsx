@@ -12,7 +12,8 @@ export function GitCommitMenu({ commit, panel, connected, onPatch, children }: {
   children: ReactElement;
 }) {
   const disabled = !connected || panel.busy;
-  const mutationDisabled = disabled || !panel.changes || panel.changes.files.some(file => file.conflict);
+  const repository = panel.changes?.workspaces?.find(state => state.root === commit.repository) ?? panel.changes;
+  const mutationDisabled = disabled || !repository || repository.files.some(file => file.conflict);
   return <GitContextMenu overlayClassName="git-commit-context-menu"
     menu={{ items: [
       { key: 'copy', label: t("client.git.copyRevisionNumber"), icon: <Copy size={16} /> },
@@ -22,7 +23,7 @@ export function GitCommitMenu({ commit, panel, connected, onPatch, children }: {
         disabled: mutationDisabled },
       { type: 'divider' },
       { key: 'reset', label: t("client.git.resetCurrentBranchToHere"), icon: <Undo2 size={16} />,
-        disabled: mutationDisabled || !panel.changes?.branch },
+        disabled: mutationDisabled || !repository?.branch },
     ], onClick: ({ key }) => {
       if (key === 'copy') void copyText(t("client.git.revisionNumber"), commit.hash);
       else if (key === 'patch' && onPatch) {

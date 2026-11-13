@@ -7,6 +7,24 @@
   > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   &:disabled { opacity: .5; cursor: default; } }
 .name:hover:not(:disabled) { color: var(--ink); }
+.clearableName { padding-left: 0; }
+.clearTrigger { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 30px; height: 28px; padding: 3px 7px; border: 0; border-radius: 999px;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+  &:disabled { opacity: .5; cursor: default; }
+  &:hover:not(:disabled) { color: var(--ink); }
+}
+.clearIcon { display: none; }
+.selection:hover .clearTrigger:not(:disabled), .clearTrigger:focus-visible {
+  .folderIcon { display: none; }
+  .clearIcon { display: block; }
+}
+@media (hover: none) {
+  .clearTrigger:not(:disabled) {
+    .folderIcon { display: none; }
+    .clearIcon { display: block; }
+  }
+}
 .panel { box-sizing: border-box; width: min(320px, calc(100vw - 24px)); max-width: 400px;
   padding: 6px; }
 .search:global(.ant-input-affix-wrapper) { min-height: 32px; padding: 5px 10px;
@@ -34,4 +52,6 @@
   color: var(--ink); pointer-events: none; text-align: center; overflow-wrap: anywhere;
   > span { max-width: 400px; }
 }
-.name:focus-visible, .option:focus-visible { outline: 2px solid var(--green, #4096ff); outline-offset: -2px; }
+.name:focus-visible, .clearTrigger:focus-visible, .option:focus-visible {
+  outline: 2px solid var(--green, #4096ff); outline-offset: -2px;
+}

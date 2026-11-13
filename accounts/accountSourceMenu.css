@@ -1,0 +1,65 @@
+.account-source-trigger.primary-button,
+.account-source-trigger.official-account-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: var(--account-source-accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: var(--account-source-font-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+.account-source-trigger[aria-expanded="true"],
+.account-source-trigger:focus-visible {
+  outline: 2px solid var(--account-source-outline);
+  outline-offset: 2px;
+}
+.account-source-dropdown { width: 300px; max-width: calc(100vw - 24px); }
+.account-source-dropdown .ant-dropdown-menu { padding: 7px; border-radius: 14px; }
+.account-source-dropdown .ant-dropdown-menu .ant-dropdown-menu-item {
+  padding: 12px;
+  border-radius: 10px;
+  color: var(--account-source-text);
+  font-size: var(--account-source-font-size);
+}
+.account-source-dropdown .ant-dropdown-menu .ant-dropdown-menu-item:hover,
+.account-source-dropdown .ant-dropdown-menu .ant-dropdown-menu-item-active {
+  background: var(--account-source-hover);
+}
+.account-source-option { display: flex; align-items: center; gap: 14px; }
+.account-source-copy { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.account-source-copy strong { font-weight: 600; }
+.account-source-copy small {
+  color: var(--account-source-muted);
+  font-size: var(--account-source-detail-size);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.account-source-chevron { flex: none; color: var(--account-source-muted); }
+.account-source-brand {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--account-source-hover);
+}
+.account-source-brand > span {
+  width: 27px;
+  height: 27px;
+  background: currentColor;
+  mask: var(--account-source-logo) center / contain no-repeat;
+  -webkit-mask: var(--account-source-logo) center / contain no-repeat;
+}
+.account-source-brand-codex { --account-source-logo: url('./assets/openai.svg'); }
+.account-source-brand-claudeCode {
+  --account-source-logo: url('./assets/claude.svg');
+  color: #d97757;
+  background: rgb(217 119 87 / 14%);
+}
