@@ -1,8 +1,9 @@
 .wrapper { display: grid; grid-template-columns: minmax(0, 1fr) 26px; gap: 4px; margin: 16px 0; min-width: 0; }
 .viewport { min-width: 0; max-width: 100%; overflow: auto;
   &:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; } }
-.table { width: 100%; border-collapse: collapse; font-size: inherit; line-height: 1.65;
-  th, td { min-width: 100px; border: 0; padding: 12px 16px; text-align: left; vertical-align: top;
+.table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: inherit; line-height: 1.65;
+  th, td { min-width: 144px; max-width: 320px; overflow-wrap: break-word; word-break: normal;
+    border: 0; padding: 12px 16px; text-align: left; vertical-align: top;
     border-bottom: 1px solid var(--gui-border, var(--line)); }
   th { font-weight: 600; }
   th:first-child, td:first-child { padding-left: 0; }

@@ -120,11 +120,13 @@
 .chat-markdown-table { display: grid; grid-template-columns: minmax(0, 1fr) 26px; gap: 4px; margin: 16px 0; }
 .chat-table-viewport { min-width: 0; max-width: 100%; overflow: auto; }
 .chat-markdown-table .chat-table-viewport table, .chat-expanded-table .chat-table-viewport table {
-  display: table; width: 100%; max-width: none; margin: 0; font-size: inherit; line-height: 1.65;
+  display: table; width: max-content; min-width: 100%; max-width: none; margin: 0;
+  font-size: inherit; line-height: 1.65;
 }
 .chat-markdown-table .chat-table-viewport th, .chat-markdown-table .chat-table-viewport td,
 .chat-expanded-table .chat-table-viewport th, .chat-expanded-table .chat-table-viewport td {
-  min-width: 100px; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--app-border, #e0e7e2);
+  min-width: 144px; max-width: 320px; overflow-wrap: break-word; word-break: normal;
+  padding: 12px 16px; border: 0; border-bottom: 1px solid var(--app-border, #e0e7e2);
   background: transparent; text-align: left; vertical-align: top;
 }
 .chat-markdown-table th, .chat-expanded-table th { font-weight: 600; }

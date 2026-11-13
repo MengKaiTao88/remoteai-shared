@@ -49,11 +49,11 @@ const components: Components = {
   a: ({ children, href }) => <ChatFileLink href={href}>{children}</ChatFileLink>,
   img: ({ src, alt }) => <MarkdownImage src={src} alt={alt} />,
   pre: ({ children }) => codeBlock(children),
+  table: ({ children }) => <ChatMarkdownTable>{children}</ChatMarkdownTable>,
 };
 
 const desktopComponents: Components = { ...components,
-  pre: ({ children }) => codeBlock(children, true),
-  table: ({ children }) => <ChatMarkdownTable>{children}</ChatMarkdownTable> };
+  pre: ({ children }) => codeBlock(children, true) };
 
 // Context consumers below this boundary still update links/images without reparsing the document.
 const MarkdownContent = memo(function MarkdownContent({ text, desktop }: { text: string; desktop: boolean }) {
