@@ -93,6 +93,8 @@ export interface Turn {
   planExplanation?: string | null;
 }
 export interface Thread {
+  /** Read-only owner queue; never persist or dispatch these entries through the Remote AI outbox. */
+  nativeQueue?: import('../remote-chat/queue').NativeQueueMessage[];
   tokenUsage?: ThreadTokenUsage;
   id: string;
   name?: string | null;
@@ -117,6 +119,7 @@ export interface ThreadTokenUsage {
   modelContextWindow?: number | null;
 }
 export interface EventParams {
+  nativeQueue?: import('../remote-chat/queue').NativeQueueMessage[];
   notificationEventId?: string;
   threadName?: string | null;
   serverName?: string;

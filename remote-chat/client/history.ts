@@ -73,8 +73,10 @@ export function mergeHistory(snapshot: Thread, live: Thread, before: Thread,
   // Notifications received during a history read take precedence, including decreases after compaction.
   const tokenUsage = live.tokenUsage !== before.tokenUsage
     ? live.tokenUsage : snapshot.tokenUsage ?? live.tokenUsage;
+  const nativeQueue = live.nativeQueue !== before.nativeQueue
+    ? live.nativeQueue : snapshot.nativeQueue ?? live.nativeQueue;
   const order = mergeTurnOrder(snapshot.turns ?? [], (live.turns ?? []).filter(turn => turns.has(turn.id)));
-  return { ...snapshot, ...(tokenUsage ? { tokenUsage } : {}),
+  return { ...snapshot, ...(tokenUsage ? { tokenUsage } : {}), ...(nativeQueue ? { nativeQueue } : {}),
     turns: order.map(id => turns.get(id)!).map((turn) => turn.status === 'inProgress'
     ? restoreTurnTiming(turn, previous.get(turn.id)) : turn) };
 }

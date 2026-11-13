@@ -91,6 +91,9 @@ function updateTurnDetails(value: Conversation, event: GuiEvent): Conversation {
 
 function reduceConversationContent(value: Conversation, event: GuiEvent): Conversation {
   const { method, params } = event;
+  if (method === 'thread/nativeQueue/updated' && params.nativeQueue) {
+    return { ...value, thread: { ...value.thread, nativeQueue: params.nativeQueue } };
+  }
   if (method === "turn/started" && params.turn) {
     return { ...updateTurn(value, params.turn.id, (old) => mergeTurn(old, params.turn!)),
       activeTurn: params.turn.id, error: "" };

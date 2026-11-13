@@ -8,6 +8,8 @@ export function queueTextPreview(text: string): string {
 
 /** Phone previews omit image data and PC-only attachment paths. The PC owns all pending messages. */
 export interface QueueMessage {
+  /** Owned and dispatched by official Codex, not this client's queue actions. */
+  official?: boolean;
   /** A local draft is retained until its remote submission is acknowledged. */
   local?: boolean;
   clientId?: string;
@@ -18,6 +20,7 @@ export interface QueueMessage {
   busy: boolean;
   error?: string;
 }
+export interface NativeQueueMessage { id: string; text: string; imageCount: number; createdAt?: number }
 export interface QueueSnapshot {
   revision: number;
   threads: Record<string, QueueMessage[]>;

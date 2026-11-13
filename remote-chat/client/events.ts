@@ -21,6 +21,9 @@ function mergeItems(previous: Item[], incoming: Item[]) {
 
 export function updateThread(thread: Thread, event: GuiEvent): Thread {
   const { params, method } = event;
+  if (method === 'thread/nativeQueue/updated' && params.nativeQueue) {
+    return { ...thread, nativeQueue: params.nativeQueue };
+  }
   if (method === 'thread/name/updated' && params.threadName !== undefined) {
     return { ...thread, name: params.threadName };
   }

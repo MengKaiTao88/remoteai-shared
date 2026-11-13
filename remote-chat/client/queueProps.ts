@@ -26,5 +26,7 @@ function queueMessages(state: ChatState) {
   const local = state.localQueue?.[state.draftScope ?? state.selected?.id ?? ''] ?? [];
   // Queue broadcasts can precede the enqueue response. Correlate by ID, never by message text.
   const pending = new Set(local.map(message => message.id));
-  return [...remote.filter(message => !message.clientId || !pending.has(message.clientId)), ...local];
+  const native: QueueMessage[] = (state.selected?.nativeQueue ?? []).map(message => ({ ...message,
+    id: `official:${message.id}`, official: true, attachmentCount: 0, busy: false }));
+  return [...native, ...remote.filter(message => !message.clientId || !pending.has(message.clientId)), ...local];
 }
