@@ -1,6 +1,6 @@
 import { displayError } from '../../localization/browserClient';
 import { t, useLanguage } from '../../localization/browserClient';
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Quote, X } from 'lucide-react';
 import { Toast } from 'antd-mobile';
 import { appendQuote, clearSubmittedQuotes, quoteKey, type ChatQuote } from '../../chat/replyQuotes';
@@ -22,12 +22,19 @@ export function ChatQuotesProvider({ scope, children, sending, enabled }: {
   const current = useRef(quotes);
   current.current = quotes;
   const previous = useRef(scope);
+  const draftOwner = useMemo(() => ({ scope }), [scope]);
+  const previousOwner = useRef(draftOwner);
   const drafts = useRef(new Map<string | null, ChatQuote[]>());
   useEffect(() => {
     if (previous.current === scope) return;
     const creating = previous.current === null && sending;
-    if (creating) drafts.current.delete(previous.current);
-    else drafts.current.set(previous.current, current.current);
+    if (creating) {
+      drafts.current.delete(previous.current);
+      previousOwner.current.scope = scope;
+    } else {
+      drafts.current.set(previous.current, current.current);
+    }
+    previousOwner.current = draftOwner;
     previous.current = scope;
     if (!creating) setQuotes(drafts.current.get(scope) ?? []);
   }, [scope, sending]);
@@ -40,7 +47,15 @@ export function ChatQuotesProvider({ scope, children, sending, enabled }: {
   };
   return <Context.Provider value={enabled ? { quotes, add,
     remove: quote => setQuotes(current => current.filter(item => quoteKey(item) !== quoteKey(quote))),
-    clear: submitted => setQuotes(current => clearSubmittedQuotes(current, submitted)) } : null}>
+    clear: submitted => {
+      const target = draftOwner.scope;
+      if (previous.current !== target) {
+        const saved = drafts.current.get(target);
+        if (saved) drafts.current.set(target, clearSubmittedQuotes(saved, submitted));
+        return;
+      }
+      setQuotes(current => clearSubmittedQuotes(current, submitted));
+    } } : null}>
     {children}</Context.Provider>;
 }
 

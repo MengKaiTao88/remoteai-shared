@@ -51,13 +51,21 @@ export function useChatDraft({ threadId, sending, disabled, selection, send, rec
   const generation = useRef(0);
   const busy = useRef(false);
   const submitting = useRef(false);
+  const pendingOwner = useRef<{ scope: string | null }>();
+  const mounted = useRef(true);
   const recoveredEdits = useRef(new WeakSet<QueueDraft>());
-  useEffect(() => () => { generation.current += 1; }, []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { generation.current += 1; mounted.current = false; };
+  }, []);
   useEffect(() => {
     if (scope.current === threadId) return;
     // Creating a thread during the first send must not discard a failed draft.
     const creating = scope.current === null && submitting.current;
-    if (creating) drafts.current.delete(scope.current);
+    if (creating) {
+      drafts.current.delete(scope.current);
+      if (pendingOwner.current) pendingOwner.current.scope = threadId;
+    }
     else drafts.current.set(scope.current, snapshot.current);
     scope.current = threadId;
     if (creating) return;
@@ -111,6 +119,8 @@ export function useChatDraft({ threadId, sending, disabled, selection, send, rec
     if (disabled || sending || busy.current || submitting.current
       || (!submittedText.trim() && !submittedImages.length && !submittedReferences.length)) return false;
     const current = generation.current;
+    const owner = { scope: scope.current };
+    pendingOwner.current = owner;
     submitting.current = true; setError('');
     try {
       const skills = draftSkills(content);
@@ -118,8 +128,17 @@ export function useChatDraft({ threadId, sending, disabled, selection, send, rec
         ...(override.goalMode ? { goalMode: true } : {}),
         ...(submittedReferences.length ? { attachments: submittedReferences } : {}),
         ...(skills.length ? { skills } : {}) });
-      if (!sent || current !== generation.current) return false;
-      setContent((value) => value.text === text ? emptySkillDraft() : value);
+      if (!sent) return false;
+      if (current !== generation.current) {
+        const saved = drafts.current.get(owner.scope);
+        if (saved) drafts.current.set(owner.scope, {
+          content: saved.content === content ? emptySkillDraft() : saved.content,
+          images: saved.images.filter(image => !images.includes(image)),
+          references: saved.references.filter(item => !submittedReferences.includes(item)),
+        });
+        if (!mounted.current || scope.current !== owner.scope) return true;
+      }
+      setContent((value) => value === content ? emptySkillDraft() : value);
       setImages((value) => value.filter((image) => !images.includes(image)));
       setReferences((value) => value.filter((item) => !submittedReferences.includes(item)));
       return true;
@@ -127,6 +146,7 @@ export function useChatDraft({ threadId, sending, disabled, selection, send, rec
       if (current === generation.current) setError('消息未发送，请稍后重试。');
       return false;
     } finally {
+      if (pendingOwner.current === owner) pendingOwner.current = undefined;
       if (current === generation.current) submitting.current = false;
     }
   };

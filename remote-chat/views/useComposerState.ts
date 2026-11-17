@@ -4,6 +4,7 @@ import { modelSelectionError } from '../../conversation/modelSelection';
 import { t } from '../../localization/browserClient';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useChatDraft } from '../client/useChatDraft';
+import { useDraftCacheScope } from '../client/useDraftCacheScope';
 import { useQueueEditor } from '../client/useQueueEditor';
 import { useGoalMode } from '../client/useGoalMode';
 import { composerAction, CONTINUE_MESSAGE } from '../composerAction';
@@ -26,11 +27,14 @@ export function useComposerState(props: ComposerProps) {
   const [dictationBusy, setDictationBusy] = useState(false);
   const [error, setError] = useState('');
   const draftScope = props.draftScope ?? threadId;
-  const attachments = useComposerAttachments({ threadId: draftScope, sending });
+  const cacheScope = useDraftCacheScope({ threadId, draftScope });
+  const currentDraftScope = useRef(cacheScope);
+  currentDraftScope.current = cacheScope;
+  const attachments = useComposerAttachments({ threadId: cacheScope, sending });
   const dropTarget = useRef<HTMLDivElement>(null);
   const quotes = useChatQuotes();
   const disabled = !ready || settingsBusy || compacting;
-  const draft = useChatDraft({ threadId: draftScope, sending,
+  const draft = useChatDraft({ threadId: cacheScope, sending,
     disabled: disabled || attachments.busy || dictationBusy, selection, send,
     recovered: props.recoveredEdit, consumeRecovered: props.consumeRecoveredEdit });
   const menu = useComposerMenu({ draft, scope: `${threadId ?? ''}:${props.cwd}`, active,
@@ -130,7 +134,8 @@ export function useComposerState(props: ComposerProps) {
     setError('');
     const text = replyWithQuotes(action === 'continue' ? CONTINUE_MESSAGE : draft.text, submittedQuotes);
     if (await draft.submit({ text, attachments: submitted, goalMode: goalMode.enabled })) {
-      goalMode.exit(); attachments.clearSubmitted(submitted); quotes?.clear(submittedQuotes);
+      if (currentDraftScope.current === cacheScope) goalMode.exit();
+      attachments.clearSubmitted(submitted); quotes?.clear(submittedQuotes);
     }
   };
   const removeGoal = () => {

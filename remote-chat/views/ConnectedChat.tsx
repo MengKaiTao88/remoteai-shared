@@ -38,6 +38,7 @@ import { visibleChatError } from '../chatError';
 import { TaskReviewProvider } from '../TaskReviewContext';
 import { ChatRetryProvider } from '../ChatRetryProvider';
 import { ChatQuotesProvider } from './ChatQuotes';
+import { useDraftCacheScope } from '../client/useDraftCacheScope';
 import { ChatFileReferencesProvider } from '../../chat/ChatFileReferences';
 import { ImageAnnotationsProvider } from '../../chat/ImageAnnotations';
 import { ChatDetailsWorkspace } from './ChatDetailsWorkspace';
@@ -110,6 +111,7 @@ function ConnectedChatContent({ chat, device, devices, active, scope, email, cho
   const external = Boolean(cli && cli.state.engine !== 'codex' && !workspacePage);
   const conversationActive = active && !workspacePage && !external;
   const { state, controller, foreground } = chat;
+  const cacheScope = useDraftCacheScope({ threadId: state.selected?.id ?? null, draftScope: state.draftScope });
   const [drawer, setDrawer] = useState(false);
   const desktop = useDesktopLayout();
   const [sidebar, setSidebar] = usePanelVisibility('chat-list');
@@ -216,7 +218,7 @@ function ConnectedChatContent({ chat, device, devices, active, scope, email, cho
     <ChatDetailsWorkspace selected={external ? `cli:${cli?.state.engine}:${cli?.state.selected?.id ?? 'draft'}`
       : state.selected?.id ?? null} active={active && !workspacePage} enabled={showDesktopDiffs}>
     <ChatFileReferencesProvider><ImageAnnotationsProvider>
-    <ChatQuotesProvider scope={state.draftScope ?? state.selected?.id ?? null} sending={state.sending}
+    <ChatQuotesProvider scope={cacheScope} sending={state.sending}
     enabled={conversationActive && !state.selectedArchived}>
     <ChatTerminalLayout>
     <header className={`chat-header${showDesktopDiffs ? ' workspace-toolbar' : ''}`}

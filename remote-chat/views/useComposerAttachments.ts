@@ -1,6 +1,6 @@
 import { displayError } from '../../localization/browserClient';
 import { t } from '../../localization/browserClient';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AttachmentReference, ComposerPlugin } from '../../conversation/attachmentTypes';
 import { remoteAttachments } from '../composerAttachments';
 import { checkFileUploadSize } from '../policy';
@@ -29,6 +29,8 @@ export function useComposerAttachments({ threadId, sending }: { threadId: string
   const mounted = useRef(true);
   const generation = useRef(0);
   const scope = useRef(threadId);
+  const draftOwner = useMemo(() => ({ scope: threadId }), [threadId]);
+  const previousOwner = useRef(draftOwner);
   const drafts = useRef(new Map<string | null, AttachmentReference[]>());
   const latest = useRef(items);
   latest.current = items;
@@ -36,8 +38,13 @@ export function useComposerAttachments({ threadId, sending }: { threadId: string
   useEffect(() => {
     if (scope.current === threadId) return;
     const creating = scope.current === null && sending;
-    if (creating) drafts.current.delete(scope.current);
-    else drafts.current.set(scope.current, latest.current);
+    if (creating) {
+      drafts.current.delete(scope.current);
+      previousOwner.current.scope = threadId;
+    } else {
+      drafts.current.set(scope.current, latest.current);
+    }
+    previousOwner.current = draftOwner;
     scope.current = threadId;
     if (creating) return;
     generation.current += 1; setItems(drafts.current.get(threadId) ?? []); setError('');
@@ -71,6 +78,13 @@ export function useComposerAttachments({ threadId, sending }: { threadId: string
     addPlugin: (plugin: ComposerPlugin) => add({ kind: 'plugin', name: plugin.interface?.displayName || plugin.name,
       path: `plugin://${plugin.id}` }),
     restore: setItems, remove: (item: AttachmentReference) => setItems(current => current.filter(entry => entry !== item)),
-    clearSubmitted: (submitted: AttachmentReference[]) =>
-      setItems(current => current.filter(entry => !submitted.includes(entry))) };
+    clearSubmitted: (submitted: AttachmentReference[]) => {
+      const target = draftOwner.scope;
+      if (scope.current !== target) {
+        const saved = drafts.current.get(target);
+        if (saved) drafts.current.set(target, saved.filter(entry => !submitted.includes(entry)));
+        return;
+      }
+      setItems(current => current.filter(entry => !submitted.includes(entry)));
+    } };
 }
