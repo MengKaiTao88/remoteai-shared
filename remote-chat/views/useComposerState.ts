@@ -1,4 +1,5 @@
 import { displayError } from '../../localization/browserClient';
+import { observeComposerWidth } from '../../chat/observeComposerWidth';
 import { modelSelectionError } from '../../conversation/modelSelection';
 import { t } from '../../localization/browserClient';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -100,14 +101,7 @@ export function useComposerState(props: ComposerProps) {
       if (viewport) viewport.scrollTop = editingEnd ? viewport.scrollHeight : scrollTop;
     };
     resize();
-    let width = input.clientWidth;
-    const observer = new ResizeObserver(() => {
-      if (input.clientWidth === width) return;
-      width = input.clientWidth;
-      resize();
-    });
-    observer.observe(input);
-    return () => observer.disconnect();
+    return observeComposerWidth(input, resize);
   }, [draft.text, active, menu.input]);
   const previousQuoteCount = useRef(0);
   const quoteCount = quotes?.quotes.length ?? 0;
