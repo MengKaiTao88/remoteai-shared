@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, CornerDownRight, Trash2 } from 'lucide-react';
 import type { QueueProps } from '../client/queueProps';
 import './queue.css';
 import { useQueueSelection } from '../client/useQueueSelection';
+import { FocusPreservingButton } from '../../chat/FocusPreservingButton';
 
 type Props = QueueProps & { edit: (id: string) => Promise<void>; editDisabled: boolean };
 
@@ -34,11 +35,11 @@ export function ChatQueue({ messages, running, disabled, act, edit, editDisabled
         {message.busy && <small role="status">{t("client.chat.sending")}</small>}
         {message.error && <small role="alert" className="chat-queue-error">{displayError(message.error)}</small>}
       </div>
-      <button type="button" disabled={disabled || sending || message.local || message.official} onPointerDown={(event) => event.preventDefault()}
-        onClick={() => void act('queueSendNow', message.id)}>{t("client.chat.sendNow")}</button>
-      <button type="button" aria-label={t("client.chat.deleteQueuedMessage")} disabled={disabled || message.busy || message.official}
-        onPointerDown={(event) => event.preventDefault()} onClick={() => void act('queueRemove', message.id)}>
-        <Trash2 size={16} aria-hidden="true" /></button>
+      <FocusPreservingButton type="button" disabled={disabled || sending || message.local || message.official}
+        onClick={() => void act('queueSendNow', message.id)}>{t("client.chat.sendNow")}</FocusPreservingButton>
+      <FocusPreservingButton type="button" aria-label={t("client.chat.deleteQueuedMessage")} disabled={disabled || message.busy || message.official}
+        onClick={() => void act('queueRemove', message.id)}>
+        <Trash2 size={16} aria-hidden="true" /></FocusPreservingButton>
     </li>)}</ul>
   </section>;
 }
