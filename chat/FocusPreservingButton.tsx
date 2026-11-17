@@ -1,6 +1,27 @@
 import * as React from 'react';
 
 type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'> & { type?: 'button' };
+const compatibilityClicks = new WeakMap<Document, () => void>();
+
+/** Layout can move the original button before the browser dispatches its compatibility click. */
+function suppressCompatibilityClick(document: Document) {
+  compatibilityClicks.get(document)?.();
+  const clear = () => {
+    document.removeEventListener('click', click, true);
+    document.removeEventListener('pointerdown', clear, true);
+    clearTimeout(timer);
+    compatibilityClicks.delete(document);
+  };
+  const click = (event: MouseEvent) => {
+    if (!event.detail) return;
+    event.preventDefault(); event.stopImmediatePropagation(); clear();
+  };
+  const timer = setTimeout(clear, 750);
+  document.addEventListener('click', click, true);
+  // The next deliberate pointer action is independent of the completed touch.
+  document.addEventListener('pointerdown', clear, { capture: true, once: true });
+  compatibilityClicks.set(document, clear);
+}
 
 /** Keep the editor focused without losing WebKit's touch action when pointer-down is cancelled. */
 export const FocusPreservingButton = React.forwardRef<HTMLButtonElement, Props>(
@@ -21,6 +42,7 @@ export const FocusPreservingButton = React.forwardRef<HTMLButtonElement, Props>(
         if (!origin || origin.id !== event.pointerId) return;
         handledTouch.current = true;
         event.preventDefault();
+        suppressCompatibilityClick(event.currentTarget.ownerDocument);
         const box = event.currentTarget.getBoundingClientRect();
         if (props.disabled || Math.abs(event.clientX - origin.x) > 12 || Math.abs(event.clientY - origin.y) > 12
           || event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) return;

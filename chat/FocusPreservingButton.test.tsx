@@ -45,3 +45,16 @@ it('does not activate canceled, moved, outside or disabled touch presses', () =>
   disabled.pointer('pointerdown'); disabled.pointer('pointerup'); disabled.click(1);
   expect(disabled.action).not.toHaveBeenCalled(); disabled.dispose();
 });
+it('blocks the compatibility click even if a layout change retargets it to another control', () => {
+  const value = fixture();
+  const other = document.createElement('button'); document.body.append(other);
+  const unintended = vi.fn(); other.addEventListener('click', unintended);
+  value.pointer('pointerdown'); value.pointer('pointerup');
+  other.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+  expect(value.action).toHaveBeenCalledTimes(1);
+  expect(unintended).not.toHaveBeenCalled();
+  other.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+  other.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+  expect(unintended).toHaveBeenCalledTimes(1);
+  value.dispose();
+});
