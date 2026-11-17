@@ -2,16 +2,18 @@ import { displayError } from '../../localization/browserClient';
 import { t, useLanguage } from '../../localization/browserClient';
 import { AdaptiveSheet } from '../../layout/AdaptiveSheet';
 import { CONTEXT_CAPACITY_PRESETS_K, type ContextSettingsApi } from '../contextSettings';
+import { useChatSurfaceTheme } from './useChatSurfaceTheme';
 import { useContextSettings } from '../client/useContextSettings';
 
 export function ChatContextSettings({ threadId, api, onClose }: {
   threadId: string; api: ContextSettingsApi; onClose: () => void;
 }) {
   useLanguage();
+  const surface = useChatSurfaceTheme();
   const editor = useContextSettings(threadId, api);
   const close = () => { if (!editor.saving) onClose(); };
   const save = async () => { if (await editor.save()) onClose(); };
-  return <AdaptiveSheet open title={t("client.chat.conversationContext")} width={400} onBack={close} onClose={close}>
+  return <AdaptiveSheet open style={surface} title={t("client.chat.conversationContext")} width={400} onBack={close} onClose={close}>
     <div className="chat-settings">
       <p className="chat-muted">{t("client.chat.appliesToThisConversationImmediatelyAnActiveReplyWillPause")}</p>
       {editor.loading && <p role="status">{t("client.chat.loadingContextSettings")}</p>}

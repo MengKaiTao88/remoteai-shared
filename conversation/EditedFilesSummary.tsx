@@ -31,7 +31,7 @@ export function EditedFilesSummary({ files, title, status, onReview, onReviewFil
   const changed = !UNAPPLIED_STATUSES.some(key => status === key || status === t(key));
   const hiddenCount = summary.length - COLLAPSED_FILE_COUNT;
   const visibleFiles = expanded ? summary : summary.slice(0, COLLAPSED_FILE_COUNT);
-  return <section className={styles.card} aria-label={t(title)}>
+  return <section className={styles.card} data-edited-files aria-label={t(title)}>
     <header className={styles.header}>
       <span className={styles.icon}><FileDiff size={21} aria-hidden="true" /></span>
       <div className={styles.overview}>

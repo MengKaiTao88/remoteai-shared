@@ -38,10 +38,13 @@ export function itemImageSources(item: Item): string[] {
     const source = generatedImageSource(item);
     return source ? [source] : [];
   }
-  if (item.type !== 'userMessage') return [];
+  if (item.type !== 'userMessage' && item.type !== 'agentMessage') return [];
   return (item.content ?? []).flatMap((entry) => {
     if (typeof entry === 'string') return [];
-    const source = entry.type === 'localImage' ? entry.path : entry.type === 'image' ? entry.url : undefined;
-    return source ? [source] : [];
+    if (!['localImage', 'image', 'input_image', 'inputImage', 'output_image'].includes(entry.type)) return [];
+    const imageUrl = typeof entry.image_url === 'string' ? entry.image_url : entry.image_url?.url;
+    const source = entry.path ?? entry.url ?? entry.imageUrl ?? imageUrl;
+    return source && (isInlineImage(source) || /^https?:\/\//i.test(source) || localImageSource(source))
+      ? [source] : [];
   });
 }

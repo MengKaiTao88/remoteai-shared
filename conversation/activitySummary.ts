@@ -1,6 +1,7 @@
 import type { Item } from './types';
 import { uiText } from '../localization/uiText';
 import { commandPreview } from '../chat/commandPreview';
+import { activityStatus } from './itemStatus';
 
 export function commandActivityLabel(item: Item, translate = uiText): string {
   const action = item.commandActions?.find(entry => entry.type !== 'unknown');
@@ -12,7 +13,7 @@ export function commandActivityLabel(item: Item, translate = uiText): string {
   });
   const states = { inProgress: 'client.mobile.running', completed: 'client.mobile.ran',
     failed: 'client.mobile.runFailed', declined: 'client.chat.declined', interrupted: 'client.chat.stopped' } as const;
-  const label = translate(states[item.status as keyof typeof states] ?? 'client.chat.runCommand');
+  const label = translate(states[activityStatus(item) as keyof typeof states] ?? 'client.chat.runCommand');
   return `${label} ${commandPreview(item.commandPreview ?? item.command ?? '')}`;
 }
 
@@ -32,7 +33,8 @@ export function activityGroupLabel(items: readonly Item[], translate = uiText): 
 /** Keep a failed or rejected operation visible even if the last operation succeeded. */
 export function activityGroupStatus(items: readonly Item[]): string | undefined {
   return ['inProgress', 'failed', 'declined', 'interrupted']
-    .find(status => items.some(item => item.status === status)) ?? items.at(-1)?.status;
+    .find(status => items.some(item => activityStatus(item) === status))
+    ?? (items.length ? activityStatus(items.at(-1)!) : undefined);
 }
 
 export function activityFileNames(item: Item): string {

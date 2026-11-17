@@ -23,7 +23,9 @@ export interface Model {
   defaultReasoningEffort: string;
   supportedReasoningEfforts: { reasoningEffort: string; description: string }[];
 }
-export interface Content { type: string; text?: string; name?: string; path?: string; url?: string }
+export interface Content {
+  type: string; text?: string; name?: string; path?: string; url?: string; imageUrl?: string; image_url?: string | { url: string };
+}
 export interface FileChange { path: string; diff: string; kind: { type: string; movePath?: string | null } }
 export interface PlanStep { step: string; status: string }
 export interface SearchResult { title?: string; url?: string; snippet?: string }
@@ -40,6 +42,7 @@ export interface Item {
   detailsRef?: { threadId: string; turnId: string; itemId: string };
   processRef?: { threadId: string; turnId: string; itemId: string; endItemId: string };
   activityCount?: number;
+  processActivityMetrics?: { commands: number; tools: number; failed: number; stopped: number };
   processCommandMetrics?: import('../remote-chat/commandMetrics').CommandMetrics;
   /** Results displayed outside the collapsed process keep their existing presentation. */
   processOutputs?: Item[];

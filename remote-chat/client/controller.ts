@@ -901,7 +901,7 @@ export class ChatController {
     if (this.managedPreviews) return this.previewDownloads!.image(threadId, source, original, options);
     const key = JSON.stringify([threadId, await contentStringHash(source), original]);
     return offlineImage({ store: this.offline, online: this.state.ready, key,
-      load: () => this.images.load(threadId, source, original), failed: this.cacheFailure });
+      load: () => this.images.load(threadId, source, original, options?.refresh), failed: this.cacheFailure });
   };
 
   previewDownloads?: import('../previewDownloads').PreviewAdapter;

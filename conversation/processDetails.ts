@@ -3,6 +3,7 @@ import { hasVisibleProcessContent } from '../chat/processContent';
 import { requestErrorPosition, turnRequestErrors } from './turnRequestErrors';
 import type { Item, Thread, Turn } from './types';
 import { summarizeCommands } from '../remote-chat/commandMetrics';
+import { activityStatus } from './itemStatus';
 
 export const processActivityCount = (items: Item[]) =>
   items.reduce((count, item) => count + (item.activityCount ?? 1), 0);
@@ -16,6 +17,13 @@ function summarizeGroup(items: Item[], threadId: string, turnId: string): Item[]
   return [{ id: items[0].id, type: 'processSummary', activityCount: visible.length,
     processRef: { threadId, turnId, itemId: items[0].id, endItemId: items.at(-1)!.id },
     processCommandMetrics: summarizeCommands([{ id: turnId, items }]),
+    processActivityMetrics: visible.reduce((counts, item) => {
+      if (item.type === 'commandExecution') counts.commands++;
+      else if (!['reasoning', 'agentMessage'].includes(item.type)) counts.tools++;
+      if (activityStatus(item) === 'failed') counts.failed++;
+      if (activityStatus(item) === 'interrupted') counts.stopped++;
+      return counts;
+    }, { commands: 0, tools: 0, failed: 0, stopped: 0 }),
     processOutputs: items.filter(item => ['fileChange', 'imageGeneration'].includes(item.type)) }];
 }
 

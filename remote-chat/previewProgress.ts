@@ -6,6 +6,8 @@ export interface PreviewProgress {
 }
 
 export interface PreviewLoadOptions {
+  /** Explicit retry after an image decode error bypasses completed online preview caches. */
+  refresh?: boolean;
   onProgress?: (progress: PreviewProgress) => void;
   /** Stop observing when the view closes; the shared download can still serve other views. */
   signal?: AbortSignal;

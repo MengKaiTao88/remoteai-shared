@@ -9,33 +9,40 @@ import { pendingQuestions } from '../client/asyncQuestions';
 import type { Item, Thread } from './types';
 import { useDismissedQuestions } from './useDismissedQuestions';
 import './asyncQuestions.css';
+import { useChatSurfaceTheme } from './useChatSurfaceTheme';
 
 interface Props {
   thread: Thread | null; disabled: boolean; error: string;
   scope: string;
+  stepByStep?: boolean;
   answer: (item: Item, answers: string[]) => Promise<boolean>;
 }
-function QuestionFields({ questions, answers, disabled, update }: {
+function QuestionFields({ questions, answers, disabled, update, visibleIndex }: {
   questions: NonNullable<Item['questions']>; answers: string[]; disabled: boolean;
   update: (index: number, value: string) => void;
+  visibleIndex?: number;
 }) {
-  return <>{questions.map((question, index) => <fieldset key={index} className="chat-question" disabled={disabled}>
+  return <>{questions.map((question, index) => visibleIndex !== undefined && visibleIndex !== index ? null
+    : <fieldset key={index} className="chat-question" disabled={disabled}>
     <legend>{question.title}</legend>
     {!!question.options?.length && <Radio.Group className="chat-question-options" value={answers[index]}
       disabled={disabled} onChange={event => update(index, event.target.value)}>
       {question.options.map((option, position) => <Radio key={position} value={option}>{option}</Radio>)}
     </Radio.Group>}
     <Input.TextArea aria-label={question.title}
-      placeholder={t("client.composer.typeYourAnswerAndPressEnterToSend")} autoFocus={index === 0}
+      placeholder={t("client.composer.typeYourAnswerAndPressEnterToSend")} autoFocus={visibleIndex === index || index === 0}
       autoSize={{ minRows: 3, maxRows: 8 }} disabled={disabled}
       value={answers[index] ?? ''} onChange={event => update(index, event.target.value)} />
   </fieldset>)}</>;
 }
-function QuestionCard({ item, disabled, error, answer, onDelete }: Omit<Props, 'thread' | 'scope'> & {
+function QuestionCard({ item, disabled, error, answer, onDelete, stepByStep }: Omit<Props, 'thread' | 'scope'> & {
   item: Item; onDelete: () => void;
 }) {
   useLanguage();
   const questions = item.questions ?? [];
+  const surface = useChatSurfaceTheme();
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const lastQuestion = !stepByStep || questionIndex >= questions.length - 1;
   const [open, setOpen] = useState(false);
   const [answers, setAnswers] = useState(() => questions.map(question => question.options?.[0] ?? ''));
   const [busy, setBusy] = useState(false);
@@ -52,6 +59,7 @@ function QuestionCard({ item, disabled, error, answer, onDelete }: Omit<Props, '
   };
   const update = (index: number, value: string) => setAnswers(previous =>
     previous.map((entry, position) => position === index ? value : entry));
+  const advance = async () => { if (answers[questionIndex]?.trim()) setQuestionIndex(value => Math.min(value + 1, questions.length - 1)); };
   return <>
     <div className="chat-question-entry">
       <button type="button" className="chat-question-open" onClick={() => setOpen(true)}
@@ -62,12 +70,22 @@ function QuestionCard({ item, disabled, error, answer, onDelete }: Omit<Props, '
         disabled={busy} onClick={onDelete}><Trash2 size={16} /></button>
     </div>
     {open && <AdaptiveSheet open title={t("client.chat.moreInformationNeeded")} width={560}
-      className="chat-question-sheet" titleIcon={<MessageCircle className="chat-question-icon" size={20} />}
+      className={'chat-question-sheet' + (stepByStep ? ' assistant-question-sheet' : '')} style={surface}
+      titleIcon={<MessageCircle className="chat-question-icon" size={20} />}
       onClose={() => { if (!busy) setOpen(false); }}>
       <form className="chat-question-form" aria-busy={busy}
-        onSubmit={event => { event.preventDefault(); void submit(); }}>
-        <div className="chat-question-fields" onKeyDown={event => submitQuestionOnEnter(event, submit)}>
-          <QuestionFields questions={questions} answers={answers} disabled={disabled || busy} update={update} />
+        onSubmit={event => { event.preventDefault(); if (lastQuestion) void submit(); else advance(); }}>
+        {stepByStep && questions.length > 1 && <div className="assistant-question-step">
+          <button type="button" className="chat-button" disabled={busy || questionIndex === 0}
+            onClick={() => setQuestionIndex(value => Math.max(0, value - 1))}>{t('client.projectBrowser.previous')}</button>
+          <span>{questionIndex + 1}/{questions.length}</span>
+          <button type="button" className="chat-button" disabled={busy || lastQuestion || !answers[questionIndex]?.trim()}
+            onClick={advance}>{t('client.projectBrowser.next')}</button>
+        </div>}
+        <div className="chat-question-fields" onKeyDown={event =>
+          submitQuestionOnEnter(event, lastQuestion ? submit : advance)}>
+          <QuestionFields questions={questions} answers={answers} disabled={disabled || busy} update={update}
+            visibleIndex={stepByStep ? questionIndex : undefined} />
         </div>
         {(error || failure) && <p role="alert" className="chat-error">{error || failure}</p>}
         <div className="chat-question-footer">
@@ -77,8 +95,8 @@ function QuestionCard({ item, disabled, error, answer, onDelete }: Omit<Props, '
               if (!submitting.current) { setOpen(false); onDelete(); }
             }}>{t("client.downloads.cancelAnswer")}</Button>
             <Button htmlType="submit" type="primary" loading={busy}
-              disabled={busy || disabled || answers.some(value => !value.trim())}>
-              {busy ? t("client.imageAi.submitting") : t("client.chat.submitAnswer")}</Button>
+              disabled={busy || disabled || (lastQuestion ? answers.some(value => !value.trim()) : !answers[questionIndex]?.trim())}>
+              {busy ? t("client.imageAi.submitting") : t(lastQuestion ? "client.chat.submitAnswer" : 'client.projectBrowser.next')}</Button>
           </div>
         </div>
       </form>

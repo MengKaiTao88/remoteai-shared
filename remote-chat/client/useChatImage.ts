@@ -24,12 +24,12 @@ export function useChatImage(source: string | undefined, options: ImagePreviewOp
     if (!local || !threadId || (!ready && !offline) || !load || thumbnail) return;
     let cancelled = false;
     setResult(undefined);
-    void load(threadId, local).then((url) => {
+    void load(threadId, local, false, { refresh: attempt > 0 }).then((url) => {
       const cached = /^(blob:|file:\/\/)/.test(url);
       if (!cancelled) setResult(isInlineImage(url) || cached ? { key, url } : { key, failed: true });
     }, () => { if (!cancelled) setResult({ key, failed: true }); });
     return () => { cancelled = true; };
-  }, [local, threadId, ready, offline, load, key, thumbnail]);
+  }, [local, threadId, ready, offline, load, key, attempt, thumbnail]);
   const current = result?.key === key ? result : undefined;
   const supported = Boolean(remote || (local && threadId && load));
   return {

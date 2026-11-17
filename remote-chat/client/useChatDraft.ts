@@ -43,6 +43,11 @@ export function useChatDraft({ threadId, sending, disabled, selection, send, rec
   const [error, setError] = useState('');
   const [picking, setPicking] = useState(false);
   const scope = useRef(threadId);
+  const drafts = useRef(new Map<string | null, {
+    content: typeof content; images: DraftImage[]; references: AttachmentReference[];
+  }>());
+  const snapshot = useRef({ content, images, references });
+  snapshot.current = { content, images, references };
   const generation = useRef(0);
   const busy = useRef(false);
   const submitting = useRef(false);
@@ -52,12 +57,17 @@ export function useChatDraft({ threadId, sending, disabled, selection, send, rec
     if (scope.current === threadId) return;
     // Creating a thread during the first send must not discard a failed draft.
     const creating = scope.current === null && submitting.current;
+    if (creating) drafts.current.delete(scope.current);
+    else drafts.current.set(scope.current, snapshot.current);
     scope.current = threadId;
     if (creating) return;
     generation.current += 1;
     busy.current = false;
     submitting.current = false;
-    setText(''); setImages([]); setReferences([]); setError(''); setPicking(false);
+    const saved = drafts.current.get(threadId);
+    setContent(saved?.content ?? emptySkillDraft());
+    setImages(saved?.images ?? []); setReferences(saved?.references ?? []);
+    setError(''); setPicking(false);
   }, [threadId]);
 
   useEffect(() => {

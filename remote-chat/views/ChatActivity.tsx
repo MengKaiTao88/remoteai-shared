@@ -1,10 +1,10 @@
 import { displayText } from '../../localization/browserClient';
 import { t, useLanguage } from '../../localization/browserClient';
 import { useId, useState, type ReactNode } from 'react';
-import { Brain, ChevronRight, FilePenLine, Search, SquareTerminal, Users, Wrench } from 'lucide-react';
+import { Brain, ChevronRight, FilePenLine, Github, Image, Search, SquareTerminal, Users, Wrench } from 'lucide-react';
 import { ChatToolContent } from './ChatToolContent';
 import { useToolSummary } from '../../chat/useToolSummary';
-import { isItemFinished } from '../../conversation/itemStatus';
+import { activityStatus, isItemFinished } from '../../conversation/itemStatus';
 import type { Item } from './types';
 import { messageContent, messageLabel } from '../../chat/messageDetails';
 import { collaborationSummary, isCollaborationActivity }
@@ -25,7 +25,7 @@ function activityLabel(item: Item) {
   const detail = item.type === 'fileChange'
     ? activityFileNames(item)
     : item.query || item.tool || item.review || item.text || item.path;
-  return [displayText(messageLabel(item)), detail, STATUS[item.status ?? '']].filter(Boolean).join(' · ');
+  return [displayText(messageLabel(item)), detail, STATUS[activityStatus(item) ?? '']].filter(Boolean).join(' · ');
 }
 
 export function ChatActivity({ item: source, onOpen, running, inline = false, onInspect, items, content }: {
@@ -38,10 +38,12 @@ export function ChatActivity({ item: source, onOpen, running, inline = false, on
   const detailsId = useId();
   const label = (items ? activityGroupLabel(items, t) : activityLabel(item))
     .slice(0, 160).replace(/\s+/g, ' ').trim();
-  const status = items ? activityGroupStatus(items) : item.status;
+  const status = items ? activityGroupStatus(items) : activityStatus(item);
   if (!label) return null;
-  const icons = { commandExecution: SquareTerminal, fileChange: FilePenLine, reasoning: Brain, webSearch: Search };
-  const Icon = isCollaborationActivity(item) ? Users : icons[item.type as keyof typeof icons] || Wrench;
+  const icons = { commandExecution: SquareTerminal, fileChange: FilePenLine, reasoning: Brain, webSearch: Search,
+    imageView: Image, imageGeneration: Image };
+  const serviceIcon = /github/i.test(item.server ?? item.tool ?? '') ? Github : Wrench;
+  const Icon = isCollaborationActivity(item) ? Users : icons[item.type as keyof typeof icons] || serviceIcon;
   return <div className={inline ? 'chat-inline-activity' : undefined} data-status={status}>
     <button type="button" className={`chat-activity${running && !isItemFinished(item.status) ? ' is-running' : ''}`}
       title={label}

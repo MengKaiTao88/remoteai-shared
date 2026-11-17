@@ -88,7 +88,7 @@ export class PreviewDownloads<T extends PreviewTask> implements PreviewAdapter {
     let request = this.pending.get(key);
     if (!request) {
       const progress = new PreviewProgressEmitter();
-      const result = this.obtain(source, this.generation, progress).finally(() => {
+      const result = this.obtain(source, this.generation, progress, options.refresh).finally(() => {
         if (this.pending.get(key)?.result === result) this.pending.delete(key);
       });
       request = { result, progress };
@@ -98,13 +98,13 @@ export class PreviewDownloads<T extends PreviewTask> implements PreviewAdapter {
     return request.result.finally(unsubscribe);
   }
 
-  private async obtain(source: PreviewSource, generation: number, progress: PreviewProgressEmitter) {
+  private async obtain(source: PreviewSource, generation: number, progress: PreviewProgressEmitter, refresh = false) {
     await this.backend.initialize();
     if (this.disposed || generation !== this.generation) throw new Error('预览已关闭，请重新打开。');
     const candidates = this.backend.snapshot().filter(task => sourceKey(task.source) === sourceKey(source));
     const cached = candidates.filter(complete).sort((a, b) => b.createdAt - a.createdAt)[0];
     // Reopening text online reads a fresh snapshot. Images have a short, explicit cache lifetime.
-    if (cached && (!this.connected() || (source.preview !== 'text' && Date.now() - cached.createdAt < CACHE_AGE_MS))) {
+    if (cached && (!this.connected() || (!refresh && source.preview !== 'text' && Date.now() - cached.createdAt < CACHE_AGE_MS))) {
       progress.update(cached);
       return cached;
     }

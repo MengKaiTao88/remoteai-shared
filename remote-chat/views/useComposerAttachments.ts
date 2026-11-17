@@ -29,13 +29,18 @@ export function useComposerAttachments({ threadId, sending }: { threadId: string
   const mounted = useRef(true);
   const generation = useRef(0);
   const scope = useRef(threadId);
+  const drafts = useRef(new Map<string | null, AttachmentReference[]>());
+  const latest = useRef(items);
+  latest.current = items;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; generation.current += 1; }; }, []);
   useEffect(() => {
     if (scope.current === threadId) return;
     const creating = scope.current === null && sending;
+    if (creating) drafts.current.delete(scope.current);
+    else drafts.current.set(scope.current, latest.current);
     scope.current = threadId;
     if (creating) return;
-    generation.current += 1; setItems([]); setError('');
+    generation.current += 1; setItems(drafts.current.get(threadId) ?? []); setError('');
   }, [threadId, sending]);
   const pick = async (files: File[]) => {
     if (picking.current || sending || !files.length) return;

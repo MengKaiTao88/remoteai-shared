@@ -22,11 +22,14 @@ export function ChatQuotesProvider({ scope, children, sending, enabled }: {
   const current = useRef(quotes);
   current.current = quotes;
   const previous = useRef(scope);
+  const drafts = useRef(new Map<string | null, ChatQuote[]>());
   useEffect(() => {
     if (previous.current === scope) return;
     const creating = previous.current === null && sending;
+    if (creating) drafts.current.delete(previous.current);
+    else drafts.current.set(previous.current, current.current);
     previous.current = scope;
-    if (!creating) setQuotes([]);
+    if (!creating) setQuotes(drafts.current.get(scope) ?? []);
   }, [scope, sending]);
   const add = (quote: ChatQuote) => {
     const result = appendQuote(current.current, quote);

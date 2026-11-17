@@ -4,6 +4,7 @@ import { Popup, SafeArea } from "antd-mobile";
 import { useContext, useId, type CSSProperties, type ReactNode } from "react";
 import { WorkspaceDrawerContext } from "../chat/workspaceDrawer";
 import { WorkspaceDrawerTab } from "../chat/WorkspaceDrawerTab";
+import { OverlayContainerContext } from './overlayContainer';
 import { useSheetDrag } from './useSheetDrag';
 
 interface AdaptiveSheetProps {
@@ -46,6 +47,7 @@ export function AdaptiveSheet({
   mobileFullscreen = false,
 }: AdaptiveSheetProps) {
   useLanguage();
+  const container = useContext(OverlayContainerContext);
   const workspace = useContext(WorkspaceDrawerContext);
   const generatedId = useId();
   const screens = Grid.useBreakpoint();
@@ -66,7 +68,7 @@ export function AdaptiveSheet({
       className={`workspace-drawer-tab-scroll ${className ?? ''}`} style={style}>
       {() => <>{(onBack || subtitle || titleAction) && titleContent}{children}</>}
     </WorkspaceDrawerTab>;
-    return <Drawer open={open} title={titleContent} placement="right" width={`min(${width}px, 100vw)`}
+    return <Drawer getContainer={container ?? undefined} open={open} title={titleContent} placement="right" width={`min(${width}px, 100vw)`}
       afterOpenChange={afterOpenChange}
       className={className} style={style}
       onClose={onClose} destroyOnHidden closable={{ 'aria-label': t("client.projectBrowser.close"), placement: 'end' }}>
@@ -74,7 +76,7 @@ export function AdaptiveSheet({
     </Drawer>;
   }
   if (screens.md) {
-    return <Modal open={open} onCancel={onClose} footer={null} width={width} centered destroyOnClose
+    return <Modal getContainer={container ?? undefined} open={open} onCancel={onClose} footer={null} width={width} centered destroyOnClose
       className={className} style={style}
       closable={{ 'aria-label': t("client.projectBrowser.close") }}
       styles={{ header: truncateTitle || titleAction ? { paddingRight: 32 } : undefined }}
@@ -82,7 +84,7 @@ export function AdaptiveSheet({
       {children}
     </Modal>;
   }
-  return <Popup visible={open} onMaskClick={onClose} destroyOnClose bodyStyle={{ ...style, ...drag.style }}
+  return <Popup getContainer={container ?? undefined} visible={open} onMaskClick={onClose} destroyOnClose bodyStyle={{ ...style, ...drag.style }}
     bodyClassName={['mobile-popup', mobileFullscreen && 'mobile-popup-fullscreen', className].filter(Boolean).join(' ')}>
     <div ref={drag.ref} className="sheet-drag-surface">
     {!mobileFullscreen && <div className="sheet-drag-handle" role="button" tabIndex={0}

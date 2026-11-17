@@ -1,6 +1,8 @@
 import { displayText } from '../../localization/browserClient';
 import { t, useLanguage } from '../../localization/browserClient';
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
+import { ChatPresentation } from './ChatPresentation';
+import { ChatShellOutput } from './ChatShellOutput';
 import type { Item } from './types';
 import { messageSections } from '../../chat/messageDetails';
 import { toolText } from '../../chat/toolText';
@@ -47,11 +49,13 @@ export function ChatToolContent({ item, onLoad }: { item: Item; onLoad?: (item: 
 function ChatToolBody({ item }: { item: Item }) {
   useLanguage();
   const desktop = useDesktopLayout();
+  const presentation = useContext(ChatPresentation);
   const text = toolText(item);
   const files = useMemo(() => item.type === 'fileChange' ? changedFiles(item.changes ?? []) : [], [item]);
   if (['agentMessage', 'reasoning', 'plan', 'enteredReviewMode', 'exitedReviewMode'].includes(item.type)) {
     return <ChatMarkdown text={text} />;
   }
+  if (item.type === 'commandExecution' && presentation.taskCards) return <ChatShellOutput item={item} />;
   if (item.type === 'commandExecution') return <>
     <p className="chat-muted">{item.cwd}{item.durationMs != null && ` · ${formatTurnDuration(item.durationMs)}`}</p>
     {desktop ? <CommandOutput command={item.command ?? ''} label={t("client.workspaceActions.toolContent")}

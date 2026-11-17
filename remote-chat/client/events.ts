@@ -55,16 +55,20 @@ export function updateThread(thread: Thread, event: GuiEvent): Thread {
 }
 
 function applyDelta(turn: Turn, event: GuiEvent): Turn {
-  const { itemId, delta = '', summaryIndex = 0 } = event.params;
+  const { itemId, delta = '', summaryIndex = 0, contentIndex = 0 } = event.params;
   if (!itemId) return turn;
   const old = turn.items.find((item) => item.id === itemId)
     ?? { id: itemId, type: event.method.includes('outputDelta') ? 'commandExecution' : 'agentMessage' };
   let item: Item = { ...old, text: (old.text ?? '') + delta };
   if (event.method.includes('outputDelta')) item = { ...old, aggregatedOutput: (old.aggregatedOutput ?? '') + delta };
   if (event.method.includes('/reasoning/')) {
-    const summary = [...(old.summary ?? [])];
-    summary[summaryIndex] = (summary[summaryIndex] ?? '') + delta;
-    item = { ...old, type: 'reasoning', summary };
+    const summaryDelta = event.method.includes('summary');
+    const field = summaryDelta ? 'summary' : 'content';
+    const index = summaryDelta ? summaryIndex : contentIndex;
+    const parts = [...(old[field] ?? [])];
+    const previous = parts[index];
+    parts[index] = (typeof previous === 'string' ? previous : previous?.text ?? '') + delta;
+    item = { ...old, type: 'reasoning', [field]: parts };
   }
   return { ...turn, items: mergeItems(turn.items, [item]) };
 }

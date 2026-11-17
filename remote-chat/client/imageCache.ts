@@ -11,8 +11,9 @@ export class ImageCache {
   private readonly pending = new Map<string, Promise<string>>();
   constructor(private readonly request: <T>(body: ImageRequest) => Promise<T>) {}
 
-  load = (threadId: string, source: string, original = false): Promise<string> => {
+  load = (threadId: string, source: string, original = false, refresh = false): Promise<string> => {
     const key = JSON.stringify([threadId, source, original, getChatPolicy().imagePreviewMaxMb]);
+    if (refresh) this.cached.delete(key);
     const cached = this.cached.get(key);
     if (cached) return Promise.resolve(cached);
     const pending = this.pending.get(key);
