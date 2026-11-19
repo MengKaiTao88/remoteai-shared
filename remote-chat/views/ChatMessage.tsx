@@ -51,7 +51,7 @@ export const ChatMessage = memo(function ChatMessage({ item, onOpen, process = f
       {!desktop && images.length > 0 && <div className="chat-sent-image-previews">
         {images.map((source, index) => <ChatImage key={index} source={source} />)}
       </div>}
-    </div> : <><ChatMarkdown text={text} process={process} desktop={desktop} />
+    </div> : <><ChatMarkdown text={text} process={process} desktop={desktop} streaming={running} />
       {!!images.length && <div className="chat-sent-images">
         {images.map((source, index) => <ChatImage key={source + index} source={source} />)}
       </div>}</>}

@@ -4,6 +4,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { Brain, ChevronRight, FilePenLine, Github, Image, Search, SquareTerminal, Users, Wrench } from 'lucide-react';
 import { ChatToolContent } from './ChatToolContent';
 import { useToolSummary } from '../../chat/useToolSummary';
+import { useScrollChain } from '../../chat/useScrollChain';
 import { activityStatus, isItemFinished } from '../../conversation/itemStatus';
 import type { Item } from './types';
 import { messageContent, messageLabel } from '../../chat/messageDetails';
@@ -35,6 +36,7 @@ export function ChatActivity({ item: source, onOpen, running, inline = false, on
   useLanguage();
   const { item, onLoad } = useToolSummary(source);
   const [expanded, setExpanded] = useState(false);
+  const list = useScrollChain<HTMLDivElement>(expanded && Boolean(items));
   const detailsId = useId();
   const label = (items ? activityGroupLabel(items, t) : activityLabel(item))
     .slice(0, 160).replace(/\s+/g, ' ').trim();
@@ -57,7 +59,9 @@ export function ChatActivity({ item: source, onOpen, running, inline = false, on
       <span className="chat-activity-text">{label}</span>
       {items && status && status !== 'completed' && <small>{STATUS[status]}</small>}
       <ChevronRight size={15} /></button>
-    {inline && expanded && <div id={detailsId}
+    {inline && expanded && <div id={detailsId} ref={items ? list : undefined} data-activity-list={items ? '' : undefined}
+      tabIndex={items ? 0 : undefined} role={items ? 'region' : undefined}
+      aria-label={items ? t('client.chat.activity') : undefined}
       className={items ? 'chat-activity-list' : 'chat-inline-tool-content chat-detail-stack'}>
       {content ? content() : <ChatToolContent item={source} onLoad={onLoad} />}
     </div>}

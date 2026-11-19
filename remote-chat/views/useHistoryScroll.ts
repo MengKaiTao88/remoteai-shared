@@ -7,17 +7,9 @@ import { restoreVirtualScroll, useVirtualScroll } from '../../chat/virtualScroll
 import { useHistoryPull } from '../../chat/useHistoryPull';
 import { useHistoryContinuation } from '../../chat/useHistoryContinuation';
 import { useCommittedCallback } from '../../chat/useCommittedCallback';
+import { canScrollWithin } from '../../chat/canScrollWithin';
 
 const TOP_TOLERANCE = 1;
-
-function canScrollUp(target: EventTarget, container: HTMLElement) {
-  let element = target instanceof Element ? target : null;
-  while (element && element !== container) {
-    if (element.scrollTop > 0 && /^(auto|scroll)$/.test(getComputedStyle(element).overflowY)) return true;
-    element = element.parentElement;
-  }
-  return false;
-}
 
 export function useHistoryScroll(
   { thread, loading, loadingMore, hasMore, loadOlder, historyLoad }: ChatMessagesProps,
@@ -72,7 +64,7 @@ export function useHistoryScroll(
   const pull = useHistoryPull(() => Boolean(list.current && list.current.scrollTop <= TOP_TOLERANCE), more);
   const touchPoint = (event: TouchEvent<HTMLDivElement>) => {
     const touch = event.touches.length === 1 ? event.touches[0] : undefined;
-    return touch && !event.defaultPrevented && !canScrollUp(event.target, event.currentTarget)
+    return touch && !event.defaultPrevented && !canScrollWithin(event.target, event.currentTarget, -1)
       ? { x: touch.pageX, y: touch.pageY } : undefined;
   };
   const onTouchStart = (event: TouchEvent<HTMLDivElement>) => pull.begin(touchPoint(event));
@@ -119,8 +111,9 @@ export function useHistoryScroll(
     return () => observer.disconnect();
   }, [updateScrollButton, movement, windowed, onScroll]);
   const onWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (event.deltaY >= 0 || event.ctrlKey || event.defaultPrevented) return;
-    if (canScrollUp(event.target, event.currentTarget)) return;
+    if (event.deltaY >= 0 || Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      || event.ctrlKey || event.metaKey || event.shiftKey || event.defaultPrevented) return;
+    if (canScrollWithin(event.target, event.currentTarget, event.deltaY)) return;
     following.current = false;
     if (event.currentTarget.scrollTop > 0) return;
     // At the top (including short histories), upward wheels do not produce a scroll event.

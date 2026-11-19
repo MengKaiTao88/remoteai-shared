@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, type ReactNode } from 'react';
 import { uiText } from '../localization/uiText';
+import { useScrollChain } from './useScrollChain';
 import './activityList.less';
 
 const VISIBLE_ACTIVITY_COUNT = 5;
@@ -14,7 +15,7 @@ function activityRow(summary: HTMLElement, list: HTMLElement) {
 export function ActivityList({ children, className, rowSelector }: {
   children: ReactNode; className: string; rowSelector: string;
 }) {
-  const list = useRef<HTMLDivElement>(null);
+  const list = useScrollChain<HTMLDivElement>();
   useLayoutEffect(() => {
     const node = list.current;
     if (!node) return;
@@ -40,9 +41,7 @@ export function ActivityList({ children, className, rowSelector }: {
     return () => observer.disconnect();
   }, [children, rowSelector]);
   return <div ref={list} className={`${className} cs-activity-list`} data-activity-list tabIndex={0}
-    role="region" aria-label={uiText('client.chat.activity')} onWheel={event => {
-      if (event.currentTarget.scrollHeight > event.currentTarget.clientHeight) event.stopPropagation();
-    }}>
+    role="region" aria-label={uiText('client.chat.activity')}>
     {children}
   </div>;
 }

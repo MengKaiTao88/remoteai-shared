@@ -33,6 +33,7 @@ import { ComposerConversationMenu } from './ComposerConversationMenu';
 import { ComposerFileMenu } from './ComposerFileMenu';
 import { ComposerSshMenu } from './ComposerSshMenu';
 import { useComposerState } from './useComposerState';
+import { useComposerAutoFocus } from '../../chat/useComposerAutoFocus';
 import type { ComposerProps } from './composerProps';
 import './composer.css';
 import './composerDesktop.css';
@@ -47,6 +48,7 @@ export function ChatComposer(props: ComposerProps) {
   const { models, selection, settingsBusy, settingsError, updateSettings, readUsage, tokenUsage, queue,
     uploadProgress, threadId, active, ready, sending, goal, goalBusy, catalog, cwd, loadFiles, loadCatalog } = props;
   const state = useComposerState(props);
+  useComposerAutoFocus({ input: state.menu.input, active, disabled: !ready, scope: threadId });
   const { draft, attachments, menu, busy, compact, action, actionDisabled, goalMode } = state;
   const voiceAction = !desktop && !!props.dictation && action === 'send'
     && !draft.hasContent && !attachments.items.length && !state.hasQuotes;

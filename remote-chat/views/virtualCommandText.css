@@ -3,7 +3,7 @@
 .chat-virtual-command-viewport {
   max-height: 340px;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: contain;
   overflow-anchor: none;
   padding: 8px 46px 8px 10px;
   color: var(--app-ink, #17211b);

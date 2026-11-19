@@ -133,7 +133,7 @@
 .chat-work-summary button:focus-visible { outline: 2px solid var(--chat-green); outline-offset: 2px; }
 .chat-activity-list {
   display: flex; flex-direction: column; gap: 2px; margin: 5px 0 3px;
-  max-height: min(360px, 45dvh); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  max-height: min(360px, 45dvh); overflow: auto; overscroll-behavior-x: contain; scrollbar-width: thin;
   padding: 2px 8px 2px 0;
 }
 .chat-inline-tool-content {

@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { CompletePlainText } from './CompletePlainText';
+import { useScrollChain } from './useScrollChain';
 import './commandOutput.css';
 
 interface Props {
@@ -12,7 +13,8 @@ interface Props {
 
 /** Command and complete output share one bounded, keyboard-accessible scroll area. */
 export function CommandOutput({ command, output, label, copyCommand, copyOutput }: Props) {
-  return <section className="cs-command-output" role="region" aria-label={label} tabIndex={0}>
+  const viewport = useScrollChain<HTMLElement>();
+  return <section ref={viewport} className="cs-command-output" role="region" aria-label={label} tabIndex={0}>
     <div className="cs-command-content">
       <div className="cs-command-input">
         <pre><span className="cs-command-prompt" aria-hidden="true">$ </span>

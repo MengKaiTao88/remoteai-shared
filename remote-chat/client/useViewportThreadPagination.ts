@@ -25,8 +25,10 @@ export function useViewportThreadPagination(options: Options) {
     buffer.current = { scope: options.scope, filling: true, viewportHeight: 0 };
   }
 
+  const canLoad = (retry: boolean) => options.enabled && !options.loading && !pending.current
+    && Boolean(options.cursor) && (!failed || retry);
   const loadMore = async (retry = false) => {
-    if (!options.enabled || options.loading || pending.current || !options.cursor || (failed && !retry)) return;
+    if (!canLoad(retry)) return;
     pending.current = true;
     setLoadingMore(true);
     setAttemptedPage(page);
@@ -36,15 +38,19 @@ export function useViewportThreadPagination(options: Options) {
   };
 
   const check = (retry = false) => {
+    if (!canLoad(retry)) return;
     const node = list.current;
-    if (!node || node.clientHeight <= 0 || node.scrollHeight <= 0) return;
-    if (buffer.current.viewportHeight !== node.clientHeight) {
-      buffer.current.viewportHeight = node.clientHeight;
+    if (!node) return;
+    const height = node.clientHeight;
+    const total = node.scrollHeight;
+    if (height <= 0 || total <= 0) return;
+    if (buffer.current.viewportHeight !== height) {
+      buffer.current.viewportHeight = height;
       buffer.current.filling = true;
     }
-    const remaining = node.scrollHeight - node.scrollTop - node.clientHeight;
-    if (remaining >= node.clientHeight) buffer.current.filling = false;
-    if (remaining <= node.clientHeight * (1 - PREFETCH_SCREEN_PROGRESS)) buffer.current.filling = true;
+    const remaining = total - node.scrollTop - height;
+    if (remaining >= height) buffer.current.filling = false;
+    if (remaining <= height * (1 - PREFETCH_SCREEN_PROGRESS)) buffer.current.filling = true;
     if (buffer.current.filling) void loadMore(retry);
   };
   const latest = useRef({ check, retryOnScroll: options.retryOnScroll });

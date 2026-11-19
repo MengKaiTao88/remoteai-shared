@@ -3,7 +3,7 @@ import type { GuiEvent, ListResponse, Thread } from './types';
 export interface ThreadListQuery { search?: string; archived: boolean; cursor?: string; limit?: number }
 type Scope = Omit<ThreadListQuery, 'cursor'>;
 type Snapshot = ListResponse<Thread>;
-interface CachedList { query: ThreadListQuery; snapshot: Snapshot; valid: boolean }
+interface CachedList { query: ThreadListQuery; snapshot: Snapshot; valid: boolean; pages: number }
 interface Change { revision: number; thread?: Thread; archived?: boolean; removed?: boolean }
 const keyOf = (query: Scope) => JSON.stringify([query.search ?? '', query.archived]);
 const summary = ({ turns: _turns, ...thread }: Thread): Thread => thread;
@@ -34,7 +34,8 @@ export class ThreadListCache {
     this.pending.clear();
   }
 
-  read(query: ThreadListQuery, force = false): Promise<Snapshot> {
+  read(query: ThreadListQuery, force = false, preservePages = false): Promise<Snapshot> {
+    const loaded = this.lists.get(keyOf(query));
     const cached = !query.cursor && !force ? this.get(query) : undefined;
     if (cached) return Promise.resolve(cached);
     const key = JSON.stringify([keyOf(query), query.cursor]);
@@ -42,7 +43,10 @@ export class ThreadListCache {
     if (pending) return pending;
     const revision = this.revision;
     const epoch = this.epoch;
-    const request = this.fetch(query, force).then(result => {
+    const pageCount = !query.cursor && preservePages ? loaded?.pages ?? 1 : 1;
+    const request = this.fetchPages(query, force, pageCount, epoch).then(({ result, pages }) => {
+      const retained = this.peek(query);
+      if (epoch !== this.epoch && retained) return retained;
       const data = query.cursor ? [...(this.peek(query)?.data ?? []), ...result.data] : result.data;
       let snapshot = { data: [...new Map(data.map(thread => [thread.id, summary(thread)])).values()],
         nextCursor: result.nextCursor };
@@ -51,7 +55,8 @@ export class ThreadListCache {
       }
       if (epoch === this.epoch) {
         const valid = !query.cursor || Boolean(this.get(query));
-        this.lists.set(keyOf(query), { query, snapshot, valid });
+        this.lists.set(keyOf(query), { query, snapshot, valid,
+          pages: query.cursor ? (loaded?.pages ?? 0) + pages : pages });
         for (const thread of snapshot.data) {
           this.known.set(thread.id, thread);
           this.archived.set(thread.id, query.archived);
@@ -65,6 +70,25 @@ export class ThreadListCache {
     }).finally(() => { if (this.pending.get(key) === request) this.pending.delete(key); });
     this.pending.set(key, request);
     return request;
+  }
+
+  /** Restore the loaded depth using fresh cursors; stale or deleted rows drop out after reconnect. */
+  private async fetchPages(query: ThreadListQuery, force: boolean, target: number, epoch: number) {
+    const first = await this.fetch(query, force);
+    if (target <= 1 || !first.nextCursor) return { result: first, pages: 1 };
+    const data = [...first.data];
+    let nextCursor: string | null = first.nextCursor;
+    let pages = 1;
+    const seen = new Set<string>();
+    while (pages < target && nextCursor && epoch === this.epoch) {
+      if (seen.has(nextCursor)) return { result: { data, nextCursor: null }, pages };
+      seen.add(nextCursor);
+      const next = await this.fetch({ ...query, cursor: nextCursor }, false);
+      data.push(...next.data);
+      nextCursor = next.nextCursor;
+      pages++;
+    }
+    return { result: { data, nextCursor }, pages };
   }
 
   private find(id: string) {

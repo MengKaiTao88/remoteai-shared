@@ -7,7 +7,7 @@ import { ChatTurnDetails } from './ChatTurnDetails';
 
 type WorkSelection = { type: 'work' | 'activities'; id: string };
 export type HistorySelection = WorkSelection | { type: 'item'; id: string }
-  | { type: 'turn'; id: string; panel: TurnPanel };
+  | { type: 'turn'; id: string; panel: TurnPanel; errorId?: string };
 type DrawerSelection = Exclude<HistorySelection, WorkSelection>;
 const tabId = (selection: DrawerSelection) =>
   `history:${selection.type}:${selection.id}:${selection.type === 'turn' ? selection.panel : 'changes'}`;

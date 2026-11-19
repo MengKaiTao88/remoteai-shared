@@ -14,11 +14,12 @@ import { useEffect } from 'react';
 
 const TITLES = { get plan() { return t("client.chat.taskPlan"); }, get changes() { return t("client.chat.changesThisTurn"); },
   get error() { return t("client.chat.errorDetails"); }, get result() { return t("client.taskReview.taskReview"); } };
-export function ChatTurnDetails({ turn, panel, onClose, tabId }: {
-  turn: Turn; panel: TurnPanel; onClose: () => void; tabId?: string;
+export function ChatTurnDetails({ turn, panel, onClose, tabId, errorId }: {
+  turn: Turn; panel: TurnPanel; onClose: () => void; tabId?: string; errorId?: string;
 }) {
   useLanguage();
-  const requestError = visibleTurnRequestErrors(turn).at(-1);
+  const errors = visibleTurnRequestErrors(turn);
+  const requestError = errorId ? errors.find(error => error.id === errorId) : errors.at(-1);
   useEffect(() => {
     if (panel === 'error' && !requestError) onClose();
   }, [panel, requestError, onClose]);

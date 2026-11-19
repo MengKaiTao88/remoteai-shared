@@ -12,7 +12,9 @@ export function mergeThreadList({ before, current, incoming, more }: ListSnapsho
   const previous = new Map(before.map(thread => [thread.id, thread]));
   const changed = new Map(current.filter(thread => thread !== previous.get(thread.id))
     .map(thread => [thread.id, thread]));
-  const summaries = incoming.map(thread => changed.get(thread.id) ?? thread);
+  const currentIds = new Set(current.map(thread => thread.id));
+  const summaries = incoming.filter(thread => !previous.has(thread.id) || currentIds.has(thread.id))
+    .map(thread => changed.get(thread.id) ?? thread);
   const pageIds = new Set(summaries.map(thread => thread.id));
   // New or newly active chats must stay visible even if the earlier snapshot omitted them.
   const base = more ? current : [...changed.values()].filter(thread => !pageIds.has(thread.id));

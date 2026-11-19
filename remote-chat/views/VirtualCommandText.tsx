@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
+import { useScrollChain } from '../../chat/useScrollChain';
 import { useVirtualText } from '../../chat/useVirtualText';
 import { chunkDisplayText } from '../../chat/virtualText';
 import { ChatCopyButton } from './ChatCopyButton';
@@ -8,7 +9,7 @@ import './virtualCommandText.css';
 export function VirtualCommandText({ text, label, command = false, empty = '' }: {
   text: string; label: string; command?: boolean; empty?: string;
 }) {
-  const viewport = useRef<HTMLDivElement>(null);
+  const viewport = useScrollChain<HTMLDivElement>();
   const virtual = useVirtualText(text || empty);
   const current = useRef(virtual);
   current.current = virtual;

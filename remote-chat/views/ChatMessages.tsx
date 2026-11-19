@@ -21,6 +21,7 @@ import { ChatMessage } from './ChatMessage';
 import { ChatToolDetails } from './ChatToolDetails';
 import { ChatTurnDetails } from './ChatTurnDetails';
 import { ChatTurnSummary } from './ChatTurnSummary';
+import { ChatRequestError } from './ChatRequestError';
 import { useHistoryDrawers, type HistorySelection as Selection } from './useHistoryDrawers';
 import { ChatTurnTiming, desktopTimeline } from './ChatTurnTiming';
 import { ChatSelectionQuote } from './ChatSelectionQuote';
@@ -75,6 +76,8 @@ const TimelineEntry = memo(function TimelineEntry({ entry, open, inline, desktop
   }
   if (entry.kind === 'summary') return <ChatTurnSummary turn={entry.turn} hideStopped={desktop}
     onOpen={panel => open({ type: 'turn', id: entry.turn.id, panel })} />;
+  if (entry.kind === 'error') return <ChatRequestError turn={entry.turn} record={entry.error}
+    onOpen={() => open({ type: 'turn', id: entry.turn.id, panel: 'error', errorId: entry.error.id })} />;
   if (entry.kind === 'work') return <WorkSummary entry={entry} inline={inline} />;
   if (entry.item.processRef) return <ChatProcessItems items={[entry.item]} turn={entry.turn} />;
   if (entry.item.type === 'userMessage' && renderUserMessage) {
@@ -170,7 +173,8 @@ function ChatMessageHistory({ props, scroll }: {
     </div>
     {work && <ChatWorkDrawer key={selection?.id} entry={work} onClose={close} />}
     {item && <ChatToolDetails item={item} onClose={close} />}
-    {turn && selection?.type === 'turn' && <ChatTurnDetails turn={turn} panel={selection.panel} onClose={close} />}
+    {turn && selection?.type === 'turn' && <ChatTurnDetails turn={turn} panel={selection.panel}
+      errorId={selection.errorId} onClose={close} />}
     {drawers.panels}
   </ConversationImageGallery>;
 }
