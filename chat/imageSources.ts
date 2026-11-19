@@ -7,6 +7,10 @@ export function isInlineImage(src: string) {
 /** Local references go through scoped IPC; they must never become WebView endpoint URLs. */
 export function localImageSource(source: string): string | undefined {
   if (/^chat-image:\/\/[a-f0-9]{64}$/.test(source)) return source;
+  // Desktop bridge images use an opaque, thread-authorized reference. Keep
+  // these references in the preview-loader path instead of treating them as
+  // public URLs or filesystem paths.
+  if (/^codex-bridge-images\/[a-f0-9]{64}\.png$/.test(source)) return source;
   if (/^file:\/\//i.test(source)) {
     try {
       const url = new URL(source);
