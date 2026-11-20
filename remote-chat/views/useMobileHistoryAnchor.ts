@@ -6,7 +6,7 @@ import { captureMobileHistory, trackMobileHistoryFollowing } from './mobileHisto
 /** Keep the visible row stable through decoded images, streamed text, disclosures and keyboard resizing. */
 export function useMobileHistoryAnchor({ enabled, viewport, content, readingAnchor, following }: {
   enabled: boolean; viewport: RefObject<HTMLDivElement>; content: RefObject<HTMLDivElement>;
-  readingAnchor: RefObject<{ element: Element; top: number } | undefined>;
+  readingAnchor: RefObject<VirtualScrollAnchor | null>;
   following: MutableRefObject<boolean>;
 }) {
   const snapshot = useRef<VirtualScrollAnchor | null>(null);
@@ -22,9 +22,9 @@ export function useMobileHistoryAnchor({ enabled, viewport, content, readingAnch
     remember();
     const resize = new ResizeObserver(() => {
       const reading = readingAnchor.current;
-      if (reading?.element.isConnected) {
+      if (reading?.anchor) {
         // A newly prepended row may be visible above this message before its real height is known.
-        restoreVirtualScroll({ root, bottom: false, anchor: reading.element, top: reading.top, offset: root.scrollTop });
+        restoreVirtualScroll(reading);
       } else if (snapshot.current) restoreVirtualScroll(snapshot.current);
       remember();
     });
