@@ -3,6 +3,7 @@ import type { ScrollMovement } from './useScrollMovement';
 
 const VIRTUAL_LAYOUT_RESTORED = 'chat-virtual-layout-restored';
 const BOTTOM_TOLERANCE = 2;
+const POSITION = 'data-history-position';
 
 export interface VirtualScrollAnchor { root: Element; bottom: boolean; anchor?: Element; top: number; offset: number }
 
@@ -12,15 +13,24 @@ export function captureVirtualScroll(root: Element | null, following?: boolean):
   const bottom = following ?? (!root.hasAttribute('data-history-newer')
     && root.scrollHeight - root.scrollTop - root.clientHeight <= BOTTOM_TOLERANCE);
   const top = root.getBoundingClientRect().top;
-  const anchor = bottom ? undefined : [...root.querySelectorAll('[data-message-id], [data-viewport-content]')]
+  const row = bottom ? undefined : [...root.querySelectorAll('[data-message-id], [data-viewport-content]')]
     .find(node => node.getBoundingClientRect().bottom > top);
+  // A process row can extend through several screens. Anchor to the actual line being read.
+  const anchor = [...(row?.querySelectorAll(`[${POSITION}]`) ?? [])].find(node => {
+    const bounds = node.getBoundingClientRect();
+    return bounds.height > 0 && bounds.bottom > top && bounds.top < top + root.clientHeight;
+  }) ?? row;
   return { root, bottom, anchor, top: anchor?.getBoundingClientRect().top ?? top, offset: root.scrollTop };
 }
 
 export function restoreVirtualScroll(snapshot: VirtualScrollAnchor) {
-  const { root, bottom, anchor, top } = snapshot;
+  const { root, bottom, top } = snapshot;
+  let { anchor } = snapshot;
+  const position = !anchor?.isConnected && anchor?.getAttribute(POSITION);
+  if (position) anchor = root.querySelector(`[${POSITION}="${CSS.escape(position)}"]`) ?? anchor;
   if (bottom) root.scrollTop = root.scrollHeight;
-  else if (anchor?.isConnected) {
+  else if (anchor?.isConnected && anchor.getClientRects().length) {
+    snapshot.anchor = anchor;
     const change = anchor.getBoundingClientRect().top - top;
     if (Math.abs(change) > 1) root.scrollTop += change;
   }

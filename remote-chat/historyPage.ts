@@ -6,7 +6,7 @@ import { summarizeProcesses } from '../conversation/processDetails';
 
 export const HISTORY_PAGE_SIZE = 10;
 export interface HistoryCursor { turnId: string; itemId: string }
-export interface HistoryWindow { start?: HistoryCursor; older?: boolean; deferProcesses?: boolean }
+export interface HistoryWindow { start?: HistoryCursor; older?: boolean; deferProcesses?: boolean; pageSize?: number }
 export interface HistoryPage { start?: HistoryCursor; hasMore: boolean }
 export type PagedHistoryDelta = HistoryDelta & { page?: HistoryPage };
 
@@ -21,6 +21,7 @@ export function parseHistoryWindow(value: unknown): HistoryWindow {
   if (!value || typeof value !== 'object') throw new Error('聊天记录已更新，请重新打开聊天。');
   const window = value as HistoryWindow;
   if ((window.start !== undefined && !validCursor(window.start))
+    || (window.pageSize !== undefined && (!Number.isSafeInteger(window.pageSize) || window.pageSize < 1))
     || (window.deferProcesses !== undefined && typeof window.deferProcesses !== 'boolean')
     || (window.older !== undefined && typeof window.older !== 'boolean')) {
     throw new Error('聊天记录已更新，请重新打开聊天。');
@@ -42,7 +43,7 @@ export function sliceHistory(thread: Thread, window: HistoryWindow = {}): { thre
     if (index >= 0) anchor = count + index;
     count += pages[position].length;
   }
-  const pageSize = getChatPolicy().historyPageSize;
+  const pageSize = window.pageSize ?? getChatPolicy().historyPageSize;
   const start = anchor < 0 ? Math.max(0, count - pageSize)
     : Math.max(0, anchor - (window.older ? pageSize : 0));
   let offset = 0;

@@ -3,7 +3,7 @@ import type { ChatMessagesProps } from '../client/messageProps';
 import { isNearHistoryStart, shouldFollowScroll, shouldShowScrollToBottom }
   from '../../chat/scrollPosition';
 import { useScrollMovement } from '../../chat/useScrollMovement';
-import { restoreVirtualScroll, useVirtualScroll } from '../../chat/virtualScroll';
+import { captureVirtualScroll, restoreVirtualScroll, useVirtualScroll, type VirtualScrollAnchor } from '../../chat/virtualScroll';
 import { useHistoryPull } from '../../chat/useHistoryPull';
 import { useHistoryContinuation } from '../../chat/useHistoryContinuation';
 import { useCommittedCallback } from '../../chat/useCommittedCallback';
@@ -23,13 +23,13 @@ export function useHistoryScroll(
   const fetching = useRef(false);
   const movement = useScrollMovement();
   useVirtualScroll({ viewport: list, following, movement });
-  const anchor = useRef<{ element: Element; top: number }>();
+  const anchor = useRef<VirtualScrollAnchor | null>(null);
   const scope = useRef(thread?.id);
   useLayoutEffect(() => {
     scope.current = thread?.id;
     following.current = true;
     fetching.current = false;
-    anchor.current = undefined;
+    anchor.current = null;
     movement.remember(list.current);
   }, [thread?.id, movement]);
   const updateScrollButton = useCallback(() => {
@@ -39,12 +39,7 @@ export function useHistoryScroll(
     }));
   }, []);
   const rememberReadingAnchor = () => {
-    const node = list.current;
-    if (!node) return;
-    const top = node.getBoundingClientRect().top;
-    const element = [...node.querySelectorAll('[data-message-id]')]
-      .find(item => item.getBoundingClientRect().bottom > top);
-    anchor.current = element ? { element, top: element.getBoundingClientRect().top } : undefined;
+    anchor.current = captureVirtualScroll(list.current, false);
   };
   const more = () => {
     if (!hasMore || loading || loadingMore || fetching.current || !loadOlder || !list.current) return;
@@ -72,12 +67,11 @@ export function useHistoryScroll(
   useLayoutEffect(() => {
     const node = list.current;
     if (!node) return;
-    if (anchor.current?.element.isConnected) {
-      node.scrollTop += anchor.current.element.getBoundingClientRect().top - anchor.current.top;
-    } else if (following.current) node.scrollTop = node.scrollHeight;
+    if (anchor.current) restoreVirtualScroll(anchor.current);
+    else if (following.current) node.scrollTop = node.scrollHeight;
     movement.remember(node);
     updateScrollButton();
-    if (!loadingMore && !windowed) anchor.current = undefined;
+    if (!loadingMore && !windowed) anchor.current = null;
   }, [thread, loadingMore, updateScrollButton, movement, windowed]);
   const onScroll = useCommittedCallback(() => {
     const node = list.current;
@@ -87,7 +81,7 @@ export function useHistoryScroll(
     if (offsetChange === 0) return;
     if (windowed) {
       if (fetching.current) rememberReadingAnchor();
-      else anchor.current = undefined;
+      else anchor.current = null;
     }
     following.current = shouldFollowScroll({ contentHeight: node.scrollHeight, viewportHeight: node.clientHeight,
       offset: node.scrollTop, movement: offsetChange });
@@ -120,7 +114,7 @@ export function useHistoryScroll(
     more();
   };
   const toBottom = () => {
-    if (windowed) anchor.current = undefined;
+    if (windowed) anchor.current = null;
     following.current = true;
     setShowBottom(false);
     const node = list.current;
