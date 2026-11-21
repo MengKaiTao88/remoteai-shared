@@ -5,6 +5,7 @@ import { syncChatProcessing } from './processing';
 import { recordRequestError, restoreRequestErrors } from '../../conversation/turnRequestErrors';
 import { currentRunningTurn } from '../../chat/runningTurn';
 import { mergeItemLifecycle } from '../../conversation/itemStatus';
+import { mergeTurnOrder } from './turnOrder';
 
 function mergeItems(previous: Item[], incoming: Item[]) {
   const items = [...previous];
@@ -48,9 +49,10 @@ export function updateThread(thread: Thread, event: GuiEvent): Thread {
   if (method === 'turn/diff/updated') turn = { ...turn, diff: params.diff };
   if (method === 'turn/plan/updated') turn = { ...turn, plan: params.plan, planExplanation: params.explanation };
   if (method.endsWith('Delta') || method.endsWith('/delta')) turn = applyDelta(turn, event);
+  // Notifications can refer to earlier turns outside the current history window.
+  const position = index < 0 ? mergeTurnOrder(turns, [turn]).indexOf(turn.id) : index;
   turn = restoreRequestErrors(restoreTurnTiming(turn, turns[index]), turns[index]);
-  if (index < 0) turns.push(turn);
-  else turns[index] = turn;
+  turns.splice(position, index < 0 ? 0 : 1, turn);
   return { ...thread, turns };
 }
 
