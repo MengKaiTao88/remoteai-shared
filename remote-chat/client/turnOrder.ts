@@ -1,10 +1,11 @@
 import type { Turn } from './types';
 
 function creationTime(turn: Turn): number | undefined {
+  // Codex turn IDs are UUIDv7. Their timestamp is stable when a viewer has estimated startedAt.
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(turn.id)) {
+    return Number.parseInt(turn.id.slice(0, 13).replace('-', ''), 16) / 1000;
+  }
   if (typeof turn.startedAt === 'number' && Number.isFinite(turn.startedAt)) return turn.startedAt;
-  // Codex turn IDs are UUIDv7; older history responses can omit startedAt.
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(turn.id)) return;
-  return Number.parseInt(turn.id.slice(0, 13).replace('-', ''), 16) / 1000;
 }
 
 /** Keep server order, inserting retained live turns at their chronological position. */
