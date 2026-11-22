@@ -1061,6 +1061,25 @@ export class ChatController {
     }
   };
 
+  continueInterrupted = async () => {
+    this.stream.flush();
+    const { selected, selectedArchived, ready, sending } = this.state;
+    const turn = selected?.turns?.at(-1);
+    if (!ready || sending || selectedArchived || !selected || turn?.status !== 'interrupted') return false;
+    const generation = this.synchronization;
+    this.update({ sending: true, error: '' });
+    try {
+      await this.request({ operation: 'continueInterruptedTask', threadId: selected.id, turnId: turn.id });
+      return true;
+    } catch (error) {
+      if (generation === this.synchronization && selected.id === this.state.selected?.id) this.failure(error);
+      return false;
+    } finally {
+      this.update({ sending: false });
+      if (generation === this.synchronization && selected.id === this.state.selected?.id) this.scheduleHistory();
+    }
+  };
+
   async interrupt() {
     this.stream.flush();
     const thread = this.state.selected;

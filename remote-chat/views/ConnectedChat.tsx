@@ -191,6 +191,7 @@ function ConnectedChatContent({ chat, device, devices, active, scope, email, cho
       refreshModels={controller.refreshModels}
       active={conversationActive} ready={ready && !state.selectedArchived} sending={state.sending} running={running}
       interrupted={state.selected?.turns?.at(-1)?.status === 'interrupted'}
+      continueInterrupted={controller.continueInterrupted}
       send={(input) => controller.enqueueMessage(input)} interrupt={() => controller.interrupt()} />
   </>;
   const profileMenu = !accountPicker && (desktop ? <ChatDesktopAccountPicker client={controller.guiAccounts}
