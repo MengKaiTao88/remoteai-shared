@@ -7,6 +7,7 @@ import type { RemoteComposerCatalog } from '../composerCatalog';
 import type { ProjectFilesRequest, ProjectFilesResponse } from '../projectFiles';
 import { applyChatEvent } from './events';
 import { isTextDelta, StreamFrame } from '../../chat/streamFrame';
+import { currentRunningTurn } from '../../chat/runningTurn';
 import { syncChatProcessing } from './processing';
 import { mergeHistory } from './history';
 import { historyLoadResult } from './historyLoad';
@@ -1063,13 +1064,20 @@ export class ChatController {
   async interrupt() {
     this.stream.flush();
     const thread = this.state.selected;
-    const turn = thread?.turns?.find((entry) => entry.status === 'inProgress');
+    const turn = currentRunningTurn(thread?.turns);
     if (!thread || !turn) return;
+    const generation = this.synchronization;
     try {
       await this.goals.pause(thread.id);
       await this.request({ operation: 'interrupt', threadId: thread.id, turnId: turn.id });
+    } catch (error) {
+      if (generation === this.synchronization && this.state.selected?.id === thread.id) this.failure(error);
+    } finally {
+      // The computer may have stopped the turn before the completion event reaches this viewer.
+      const selected = this.state.selected;
+      if (generation === this.synchronization && selected?.id === thread.id
+        && currentRunningTurn(selected.turns)?.id === turn.id) this.scheduleHistory();
     }
-    catch (error) { this.failure(error); }
   }
 
   async respond(reply: ApprovalReply) {
