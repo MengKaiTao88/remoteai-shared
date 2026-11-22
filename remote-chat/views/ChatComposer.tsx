@@ -6,7 +6,7 @@ import { useComposerSuggestion } from '../../chat/useComposerSuggestion';
 import { ComposerSuggestion } from './ComposerSuggestion';
 import { ComposerInput } from './ComposerInput';
 import { t, useLanguage } from '../../localization/browserClient';
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { ArrowUp, Pause, Play, Plus,
   SlidersHorizontal, Square, X } from 'lucide-react';
 import { COMPOSER_ACTION_LABELS } from '../composerAction';
@@ -45,7 +45,7 @@ export function ChatComposer(props: ComposerProps) {
   const metrics = useConversationMetrics(props.readConversationMetrics, props.threadId,
     desktop && props.active && props.ready && usageSnapshot.visible);
   const { models, selection, settingsBusy, settingsError, updateSettings, readUsage, tokenUsage, queue,
-    uploadProgress, threadId, active, ready, sending, goal, goalBusy, catalog, cwd, loadFiles, loadCatalog } = props;
+    uploadProgress, threadId, active, ready, sending, goal, goalBusy, catalog, cwd, loadFiles } = props;
   const state = useComposerState(props);
   const { draft, attachments, menu, busy, compact, action, actionDisabled, goalMode } = state;
   const voiceAction = !desktop && !!props.dictation && action === 'send'
@@ -66,7 +66,6 @@ export function ChatComposer(props: ComposerProps) {
     fill: text => { draft.setText(text); menu.setSelection({ start: text.length, end: text.length });
       menu.input.current?.focus(); } });
   const editing = draft.images.find(image => image.id === editingId);
-  const readCatalog = useCallback(() => loadCatalog(cwd), [loadCatalog, cwd]);
   useEffect(() => { if (!active || busy || !editing) setEditingId(null); }, [active, busy, editing]);
   useEffect(() => { if (!active) { setSettings(false); setAdding(false); setProjectFiles(null); } }, [active]);
   useEffect(() => { setSettings(false); setAdding(false); setProjectFiles(null); }, [threadId]);
@@ -138,10 +137,8 @@ export function ChatComposer(props: ComposerProps) {
           key={threadId} input={menu.input} query={menu.query} threadId={threadId} ready={ready && !busy}
           load={props.loadConversations} close={menu.close}
           choose={reference => { if (attachments.add(reference)) menu.consumeTrigger(); }} />}
-        {!adding && menu.plugins && <ComposerPluginMenu catalog={catalog} query={menu.query} load={readCatalog}
-          input={menu.input} close={menu.close}
-          chooseSkill={menu.choose}
-          choosePlugin={plugin => { attachments.addPlugin(plugin); menu.consumeTrigger(); }} />}
+        {!adding && menu.plugins && <ComposerPluginMenu catalog={catalog} query={menu.query} load={state.readCatalog}
+          input={menu.input} close={menu.close} chooseSkill={menu.choose} choosePlugin={state.choosePlugin} />}
         {!adding && menu.files && <ComposerFileMenu key={`${threadId}:${cwd}`} input={menu.input}
           query={menu.query} threadId={threadId} cwd={cwd} ready={ready && !busy} load={loadFiles} close={menu.close}
           choose={reference => { if (attachments.add(reference)) menu.consumeTrigger(); }} />}
@@ -150,6 +147,7 @@ export function ChatComposer(props: ComposerProps) {
           choose={reference => { if (attachments.add(reference)) menu.consumeTrigger(); }} />}
         {!adding && !menu.plugins && !menu.conversations && !menu.files && !menu.ssh && <ChatCommandMenu
             catalog={catalog} query={menu.query} skillsOnly={menu.skillsOnly} input={menu.input}
+            plugins={ready ? { load: state.readCatalog, choose: state.choosePlugin } : undefined}
             compactReason={props.compactReason} choose={menu.choose} compact={() => { void menu.runCompact(); }}
             goal={() => { menu.consumeTrigger(); goalMode.enter(); }} close={menu.close} />}</div>}
       <div className="chat-composer-field" aria-hidden={settings || undefined}

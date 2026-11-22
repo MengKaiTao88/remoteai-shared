@@ -2,7 +2,7 @@ import { displayError } from '../../localization/browserClient';
 import { observeComposerWidth } from '../../chat/observeComposerWidth';
 import { modelSelectionError } from '../../conversation/modelSelection';
 import { t } from '../../localization/browserClient';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useChatDraft } from '../client/useChatDraft';
 import { useDraftCacheScope } from '../client/useDraftCacheScope';
 import { useQueueEditor } from '../client/useQueueEditor';
@@ -19,6 +19,7 @@ import { useComposerPaste } from './useComposerPaste';
 import { fileDropError, useFileDrop } from '../../chat/useFileDrop';
 import { useComposerFileReferences } from '../../chat/ChatFileReferences';
 import { useComposerImageAnnotations } from '../../chat/ImageAnnotations';
+import type { ComposerPlugin } from '../../conversation/attachmentTypes';
 
 export function useComposerState(props: ComposerProps) {
   const { threadId, active, ready, sending, settingsBusy, compacting, selection, send, goals, running } = props;
@@ -39,6 +40,11 @@ export function useComposerState(props: ComposerProps) {
     recovered: props.recoveredEdit, consumeRecovered: props.consumeRecoveredEdit });
   const menu = useComposerMenu({ draft, scope: `${threadId ?? ''}:${props.cwd}`, active,
     refresh: props.catalog.refresh, compact: props.compact });
+  const readCatalog = useCallback(() => props.loadCatalog(props.cwd, threadId ?? undefined),
+    [props.loadCatalog, props.cwd, threadId]);
+  const choosePlugin = (plugin: ComposerPlugin) => {
+    if (ready && attachments.addPlugin(plugin)) menu.consumeTrigger();
+  };
   const hasContent = draft.hasContent || attachments.items.length > 0 || Boolean(quotes?.quotes.length);
   const queueEditor = useQueueEditor({ threadId: draftScope, queue: props.queue,
     disabled: !active || disabled || sending || draft.picking || attachments.busy || dictationBusy || hasContent,
@@ -142,7 +148,8 @@ export function useComposerState(props: ComposerProps) {
     if (props.goal && threadId) void goals.clear(threadId).then(cleared => { if (cleared) goalMode.exit(); });
     else goalMode.exit();
   };
-  return { draft, attachments, goalMode, menu, queueEditor, busy, compact, action, actionDisabled, pausing,
+  return { draft, attachments, goalMode, menu, readCatalog, choosePlugin, queueEditor,
+    busy, compact, action, actionDisabled, pausing,
     drop, dropTarget, dictationBusy, setDictationBusy,
     hasQuotes: Boolean(quotes?.quotes.length),
     error: error || paste.error || attachments.error || draft.error, submit, removeGoal,
