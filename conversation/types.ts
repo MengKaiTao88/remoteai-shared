@@ -267,7 +267,8 @@ export type Request =
   | { operation: "rename"; threadId: string; name: string }
   | { operation: "generateTitle"; threadId: string; prompt: string;
       settings: import('../chat/titleSettings').TitleSettings }
-  | { operation: "interrupt"; threadId: string; turnId: string };
+  | { operation: "interrupt"; threadId: string; turnId: string }
+  | { operation: "continueInterruptedTask"; threadId: string; turnId: string };
 
 export interface MessageInput {
   /** Correlates the originating client's optimistic queue preview with the accepted message. */

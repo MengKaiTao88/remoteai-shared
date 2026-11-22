@@ -57,6 +57,7 @@ export interface ComposerProps {
   interrupted?: boolean;
   send: (input: SendInput) => Promise<boolean>;
   interrupt: () => Promise<void>;
+  continueInterrupted?: () => Promise<boolean>;
   goals: Pick<RemoteGoals, 'load' | 'clear'>;
   goal?: ThreadGoal | null;
   goalBusy: boolean;

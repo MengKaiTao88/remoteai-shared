@@ -7,7 +7,7 @@ import { useChatDraft } from '../client/useChatDraft';
 import { useDraftCacheScope } from '../client/useDraftCacheScope';
 import { useQueueEditor } from '../client/useQueueEditor';
 import { useGoalMode } from '../client/useGoalMode';
-import { composerAction, CONTINUE_MESSAGE } from '../composerAction';
+import { composerAction } from '../composerAction';
 import { chatAttachmentDataLimit, validateUploadedFiles } from '../composerAttachments';
 import { replyWithQuotes } from '../../chat/replyQuotes';
 import { useChatQuotes } from './ChatQuotes';
@@ -92,8 +92,8 @@ export function useComposerState(props: ComposerProps) {
   const action = composerAction({ running: running && !hasContent,
     interrupted: !!props.interrupted && !goalMode.enabled, hasDraft: hasContent });
   const actionDisabled = dictationBusy || (action === 'pause' ? !ready || pausing : disabled || busy || props.goalBusy
-    || Boolean(modelSelectionError(props.models, selection))
-    || (goalMode.enabled && running) || (action === 'send' && !hasContent));
+    || (goalMode.enabled && running) || (action === 'continue' && !props.continueInterrupted)
+    || (action === 'send' && (!hasContent || Boolean(modelSelectionError(props.models, selection)))));
   useEffect(() => { if (active && ready && threadId) void goals.load(threadId); }, [goals, threadId, active, ready]);
   useEffect(() => { setError(''); }, [threadId]);
   useLayoutEffect(() => {
@@ -129,6 +129,11 @@ export function useComposerState(props: ComposerProps) {
       try { await props.interrupt(); } finally { setPausing(false); }
       return;
     }
+    if (action === 'continue') {
+      setError('');
+      if (!await props.continueInterrupted?.()) setError(t('client.taskRecovery.failed'));
+      return;
+    }
     const submitted = attachments.items;
     const submittedQuotes = quotes?.quotes ?? [];
     try {
@@ -138,7 +143,7 @@ export function useComposerState(props: ComposerProps) {
       if (size > chatAttachmentDataLimit()) throw new Error(t("client.chat.attachmentsAreTooLargeRemoveSomePhotosOrFilesAnd"));
     } catch (cause) { setError(cause instanceof Error ? cause.message : t("client.chat.couldNotSendTheFilePleaseChooseItAgain")); return; }
     setError('');
-    const text = replyWithQuotes(action === 'continue' ? CONTINUE_MESSAGE : draft.text, submittedQuotes);
+    const text = replyWithQuotes(draft.text, submittedQuotes);
     if (await draft.submit({ text, attachments: submitted, goalMode: goalMode.enabled })) {
       if (currentDraftScope.current === cacheScope) goalMode.exit();
       attachments.clearSubmitted(submitted); quotes?.clear(submittedQuotes);
