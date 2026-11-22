@@ -65,7 +65,7 @@ export interface ComposerProps {
   compactReason: string | null;
   compacting: boolean;
   compact: () => Promise<boolean>;
-  loadCatalog: (cwd: string) => Promise<RemoteComposerCatalog>;
+  loadCatalog: (cwd: string, threadId?: string) => Promise<RemoteComposerCatalog>;
   loadFiles: (options: ProjectFilesRequest) => Promise<ProjectFilesResponse>;
   loadConversations: ConversationSearch;
 }

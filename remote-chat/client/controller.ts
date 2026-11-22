@@ -955,10 +955,10 @@ export class ChatController {
     return result;
   };
 
-  loadComposerCatalog = async (cwd: string) => {
+  loadComposerCatalog = async (cwd: string, threadId?: string) => {
     const generation = this.skillGeneration;
     const result = await this.connection.request<RemoteComposerCatalog>('request', {
-      operation: 'skills', cwd: cwd || undefined, includePlugins: true,
+      operation: 'skills', cwd: cwd || undefined, threadId, includePlugins: true,
     });
     if (!this.active || generation !== this.skillGeneration) throw new Error('请连接电脑后重新打开插件。');
     return result;

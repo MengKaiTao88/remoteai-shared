@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import type { useChatDraft } from '../client/useChatDraft';
 import type { TextSelection } from '../client/skillDraft';
 import { composerMenuTrigger } from '../../chat/composerTrigger';
@@ -54,12 +55,15 @@ export function useComposerMenu({ draft, scope, active, refresh, compact }: Opti
     setPickingPlugins(true); setExpanded(true); input.current?.focus();
   };
   const consumeTrigger = () => {
-    if (trigger && !pickingPlugins) {
-      draft.removeText(trigger, draft.text);
-      setSelection({ start: trigger.start, end: trigger.start });
-      focusAt(trigger.start);
-    }
+    const target = pickingPlugins ? null : trigger;
+    // Commit the controlled input value before moving the caret. A keyboard
+    // selection event can otherwise cancel a deferred caret restore.
+    if (target) flushSync(() => draft.removeText(target, draft.text));
     close(); input.current?.focus();
+    if (target) {
+      updateSelection({ start: target.start, end: target.start });
+      input.current?.setSelectionRange(target.start, target.start);
+    }
   };
   const choose = (skill: Skill) => {
     if (!skill.enabled) return;

@@ -1,11 +1,11 @@
-import { displayText, displayError } from '../../localization/browserClient';
-import { t, useLanguage } from '../../localization/browserClient';
-import { useEffect, useState, type RefObject } from 'react';
+import { displayError, displayText, t, useLanguage } from '../../localization/browserClient';
+import { useEffect, useState, type ButtonHTMLAttributes, type RefObject } from 'react';
 import { Box, Camera, File, Folder, Image, X } from 'lucide-react';
 import type { Skill } from './types';
 import type { ComposerPlugin } from '../../conversation/attachmentTypes';
 import type { RemoteComposerCatalog } from '../composerCatalog';
 import { skillDescription, skillLabel, type SkillCatalogState } from '../../chat/skillCatalog';
+import { FocusPreservingButton } from '../../chat/FocusPreservingButton';
 import { useComposerMenuKeyboard, type ComposerMenuOption } from './useComposerMenuKeyboard';
 import { useChatSurfaceTheme } from './useChatSurfaceTheme';
 
@@ -28,12 +28,15 @@ interface CommandProps {
   input: RefObject<HTMLTextAreaElement>;
   catalog: SkillCatalogState; query: string; skillsOnly: boolean; compactReason: string | null;
   choose: (skill: Skill) => void; compact: () => void; goal: () => void; close: () => void;
+  plugins?: PluginChoices;
 }
 export function ChatCommandMenu({ catalog, query, skillsOnly, compactReason, choose, compact, goal,
-  close, input }: CommandProps) {
+  close, input, plugins }: CommandProps) {
   const language = useLanguage();
   const surfaceTheme = useChatSurfaceTheme();
   const search = query.toLocaleLowerCase();
+  const pluginCatalog = usePluginCatalog(skillsOnly ? undefined : plugins?.load);
+  const choices = pluginOptions(pluginCatalog.result, search, plugins?.choose);
   const skills = catalog.skills.filter(skill =>
     `${skill.name} ${skillLabel(skill)} ${skillDescription(skill, language)}`.toLocaleLowerCase().includes(search));
   const showCompact = !skillsOnly && t("client.chat.compactContext").includes(search);
@@ -41,11 +44,15 @@ export function ChatCommandMenu({ catalog, query, skillsOnly, compactReason, cho
   const options: ComposerMenuOption[] = [
     ...(showCompact ? [{ key: 'compact', enabled: compactReason === null, choose: compact }] : []),
     ...(showGoal ? [{ key: 'goal', enabled: true, choose: goal }] : []),
+    ...choices,
     ...skills.map(skill => ({ key: skill.path, enabled: skill.enabled, choose: () => choose(skill) })),
   ];
   const keyboard = useComposerMenuKeyboard({ input, query, options, close });
-  return <div className="chat-command-menu" style={surfaceTheme} aria-label={t("client.chat.commandsAndSkills")}>
-    <header><strong>{t("client.chat.commandsAndSkills")}</strong><button type="button" aria-label={t("client.chat.closeCommandsAndSkills")} onClick={close}>
+  const commands = t('client.chat.commandsAndSkills');
+  const title = choices.length ? `${commands} · ${t('client.chat.plugins')}` : commands;
+  return <div className="chat-command-menu" style={surfaceTheme} aria-label={title}>
+    <header><strong>{title}</strong>
+      <button type="button" aria-label={t("client.chat.closeCommandsAndSkills")} onClick={close}>
       <X size={16} /></button></header>
     <div ref={keyboard.list} id={keyboard.id} className="chat-menu-options" role="menu">
       {showCompact && <button type="button" role="menuitem" aria-label={t("client.chat.compactContext.d36946")}
@@ -55,15 +62,63 @@ export function ChatCommandMenu({ catalog, query, skillsOnly, compactReason, cho
       {showGoal && <button type="button" role="menuitem" aria-label={t("client.chat.goalMode")} onClick={goal}
         {...keyboard.optionProps('goal')}>
         <strong>{t("client.chat.goal")} <small>/goal</small></strong><small>{t("client.chat.keepWorkingUntilTheGoalIsComplete")}</small></button>}
-      {skills.map(skill => <button key={skill.path} type="button" role="menuitem" {...keyboard.optionProps(skill.path)}
-        aria-label={t("client.chat.useSkill", { value1: skillLabel(skill) })} disabled={!skill.enabled} onClick={() => choose(skill)}>
+      {choices.map(option => <PluginOption key={option.key} option={option} {...keyboard.optionProps(option.key)} />)}
+      {skills.map(skill => <FocusPreservingButton key={skill.path} role="menuitem" {...keyboard.optionProps(skill.path)}
+        aria-label={t("client.chat.useSkill", { value1: skillLabel(skill) })}
+        disabled={!skill.enabled} onClick={() => choose(skill)}>
         <strong>{skillLabel(skill)}{!skill.enabled && t("client.chat.disabled")}</strong>
-        <small>{skillDescription(skill, language)}</small></button>)}
+        <small>{skillDescription(skill, language)}</small></FocusPreservingButton>)}
       {catalog.loading && !catalog.loaded && <p role="status">{t("client.chat.loadingSkills")}</p>}
       {catalog.error && <p role="status">{displayError(catalog.error)}</p>}
-      {catalog.loaded && !skills.length && !showCompact && !showGoal && <p>{t("client.chat.noMatchingCommandsOrSkills")}</p>}
+      {pluginCatalog.loading && <p role="status">{t("client.chat.loadingPlugins")}</p>}
+      {pluginCatalog.error && <p role="status">{displayError(pluginCatalog.error)}</p>}
+      {catalog.loaded && !options.length && !pluginCatalog.loading
+        && <p>{t("client.chat.noMatchingCommandsOrSkills")}</p>}
     </div>
   </div>;
+}
+
+interface PluginChoices {
+  load: () => Promise<RemoteComposerCatalog>;
+  choose: (plugin: ComposerPlugin) => void;
+}
+
+function usePluginCatalog(load?: PluginChoices['load']) {
+  const [read, setRead] = useState<{ load: PluginChoices['load']; result?: RemoteComposerCatalog }>();
+  useEffect(() => {
+    if (!load) return;
+    let cancelled = false;
+    void load().then(result => { if (!cancelled) setRead({ load, result }); })
+      .catch(() => { if (!cancelled) setRead({ load }); });
+    return () => { cancelled = true; };
+  }, [load]);
+  const response = load && read?.load === load ? read : undefined;
+  return { result: response?.result, loading: !!load && !response,
+    error: response && !response.result ? t('client.chat.couldNotUpdatePluginsYouCanStillChooseExistingItems')
+      : response?.result?.pluginsError || '' };
+}
+
+function pluginOptions(result: RemoteComposerCatalog | undefined, search: string, choose?: PluginChoices['choose']) {
+  if (!choose) return [];
+  return (result?.plugins ?? []).filter(plugin => plugin.installed && plugin.enabled).flatMap(plugin => {
+    const label = plugin.interface?.displayName || plugin.name;
+    const description = plugin.interface?.shortDescription;
+    return `${label} ${plugin.name}`.toLocaleLowerCase().includes(search)
+      ? [{ key: `plugin:${plugin.id}`, label, description, enabled: true, choose: () => choose(plugin) }]
+      : [];
+  });
+}
+
+function PluginOption({ option, ...attributes }: Pick<ButtonHTMLAttributes<HTMLButtonElement>,
+  'id' | 'tabIndex' | 'aria-current'> & {
+  option: ReturnType<typeof pluginOptions>[number];
+}) {
+  return <FocusPreservingButton role="menuitem" {...attributes}
+    aria-label={t("client.chat.use.e0049a", { value1: t("client.chat.plugins"), value2: option.label })}
+    onClick={option.choose}>
+    <strong className="chat-row"><Box size={16} aria-hidden="true" />{option.label}</strong>
+    {option.description && <small>{option.description}</small>}
+  </FocusPreservingButton>;
 }
 
 export function ComposerPluginMenu({ catalog, query, load, chooseSkill, choosePlugin, input, close }: {
@@ -72,34 +127,24 @@ export function ComposerPluginMenu({ catalog, query, load, chooseSkill, choosePl
   chooseSkill: (skill: Skill) => void; choosePlugin: (plugin: ComposerPlugin) => void;
 }) {
   useLanguage();
-  const [result, setResult] = useState<RemoteComposerCatalog>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    let cancelled = false;
-    void load().then(value => { if (!cancelled) { setResult(value); setError(value.pluginsError ?? ''); } })
-      .catch(() => { if (!cancelled) setError(t("client.chat.couldNotUpdatePluginsYouCanStillChooseExistingItems")); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [load]);
+  const { result, loading, error } = usePluginCatalog(load);
+  const plugins = pluginOptions(result, query.toLocaleLowerCase(), choosePlugin);
   const skills = result?.data.flatMap(group => group.skills) ?? catalog.skills;
-  const entries = [
-    ...(result?.plugins ?? []).filter(plugin => plugin.installed && plugin.enabled).map(plugin => ({
-      key: `plugin:${plugin.id}`, label: plugin.interface?.displayName || plugin.name,
-      name: plugin.name, action: () => choosePlugin(plugin), type: t("client.chat.plugins"),
-    })),
-    ...skills.filter(skill => skill.enabled).map(skill => ({ key: skill.path, label: skillLabel(skill),
-      name: skill.name, action: () => chooseSkill(skill), type: t("client.chat.skills") })),
-  ].filter(entry => `${entry.label} ${entry.name}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+  const options = skills.filter(skill => skill.enabled
+    && `${skillLabel(skill)} ${skill.name}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+  const skillOptions = options.map(skill => ({ key: skill.path, enabled: true, choose: () => chooseSkill(skill) }));
   const keyboard = useComposerMenuKeyboard({ input, query, close,
-    options: entries.map(entry => ({ key: entry.key, enabled: true, choose: entry.action })) });
+    options: [...plugins, ...skillOptions] });
   return <div className="chat-command-menu" aria-label={t("client.chat.pluginList")}><header><strong>{t("client.chat.plugins")}</strong></header>
     <div ref={keyboard.list} id={keyboard.id} className="chat-menu-options" role="menu">
-      {entries.map(entry => <button type="button" role="menuitem" {...keyboard.optionProps(entry.key)}
-      key={entry.key} aria-label={t("client.chat.use.e0049a", { value1: entry.type, value2: entry.label })} onClick={entry.action}>
-      <span className="chat-row"><Box size={20} />{entry.label}</span></button>)}
-      {loading && !entries.length && <p role="status">{t("client.chat.loadingPlugins")}</p>}
-      {!loading && !entries.length && !error && <p>{query ? t("client.chat.noMatchingPlugins") : t("client.chat.noPluginsOrSkillsAvailable")}</p>}
+      {plugins.map(option => <PluginOption key={option.key} option={option} {...keyboard.optionProps(option.key)} />)}
+      {options.map(skill => <FocusPreservingButton role="menuitem" {...keyboard.optionProps(skill.path)} key={skill.path}
+        aria-label={t("client.chat.use.e0049a", { value1: t("client.chat.skills"), value2: skillLabel(skill) })}
+        onClick={() => chooseSkill(skill)}>
+        <span className="chat-row"><Box size={20} />{skillLabel(skill)}</span></FocusPreservingButton>)}
+      {loading && !plugins.length && !options.length && <p role="status">{t("client.chat.loadingPlugins")}</p>}
+      {!loading && !plugins.length && !options.length && !error
+        && <p>{query ? t("client.chat.noMatchingPlugins") : t("client.chat.noPluginsOrSkillsAvailable")}</p>}
       {error && <p role="status">{displayError(error)}</p>}
     </div></div>;
 }

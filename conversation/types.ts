@@ -243,7 +243,7 @@ export type Request =
   | { operation: "imagePreview"; threadId: string; source: string; variant?: "thumbnail" | "original"; maxBytes?: number }
   | { operation: "goalGet" | "goalClear"; threadId: string }
   | { operation: "goalSet"; threadId: string; objective?: string; status: "active" | "paused" }
-  | { operation: "plugins"; cwd?: string }
+  | { operation: "plugins"; cwd?: string; threadId?: string }
   | { operation: "cozeCatalog" }
   | { operation: "sendBatch"; threadId: string; messages: MessageInput[]; model?: string; effort?: string;
       access: AccessMode; cwd?: string }
