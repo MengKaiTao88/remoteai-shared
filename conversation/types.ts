@@ -249,7 +249,7 @@ export type Request =
       access: AccessMode; cwd?: string }
   | { operation: "steer"; threadId: string; turnId: string; text: string; images: string[];
       skills: SkillReference[]; attachments?: AttachmentReference[]; transferMode?: 'direct' | 'relay' }
-  | { operation: "skills"; cwd?: string }
+  | { operation: "skills"; cwd?: string; threadId?: string }
   | { operation: "models"; cursor?: string; cacheOnly?: boolean }
   | { operation: "list"; cursor?: string; archived: boolean; search?: string; limit?: number; force?: boolean }
   | { operation: "groupThreadSummaries"; threadIds: string[]; archived: boolean }

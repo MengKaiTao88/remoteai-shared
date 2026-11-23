@@ -70,6 +70,7 @@
 .chat-command-menu header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;
   position: sticky; top: 0; z-index: 1; background: var(--app-surface, #fff); color: var(--app-muted, #74847b); font-size: 12px; }
 .chat-command-menu header button { display: grid; place-items: center; border: 0; background: transparent; }
+.chat-menu-section { display: block; padding: 6px 14px 2px; color: var(--app-muted, #7b8981); font-size: 12px; }
 .chat-menu-options > button { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 10px 14px;
   border: 0; background: transparent; color: var(--app-ink, #25332b); font: inherit; text-align: left; cursor: pointer; }
 .chat-command-menu .chat-menu-options > button:hover:not(:disabled) {

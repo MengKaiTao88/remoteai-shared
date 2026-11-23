@@ -133,7 +133,7 @@ function ConnectedChatContent({ chat, device, devices, active, scope, email, cho
   const cwd = state.selected?.cwd ?? state.draftProject?.cwd ?? '';
   const workspaceCwd = external && cli ? cli.state.selected?.cwd ?? cli.state.cwd : cwd;
   useEffect(() => { onWorkspaceChange?.(workspaceCwd); }, [workspaceCwd, onWorkspaceChange]);
-  const catalog = useChatCatalog(controller, cwd, ready);
+  const catalog = useChatCatalog(controller, cwd, ready && active && foreground, state.selected?.id);
   const runningTurn = currentRunningTurn(state.selected?.turns);
   const running = Boolean(runningTurn);
   const approvals = state.approvals.filter((event) => event.params.threadId === state.selected?.id);
