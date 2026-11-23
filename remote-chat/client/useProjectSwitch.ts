@@ -32,15 +32,19 @@ export function useProjectSwitch({ state, controller, active, workspace }: Proje
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [controller, screen, disabled, revision]);
+  const includeRecent = Boolean(workspace || state.selected);
   const projects = useMemo(() => {
-    const known = [...saved, ...state.threads.filter(thread => thread.cwd).map(thread => directoryProject(thread.cwd))];
+    const known = [...saved];
+    if (includeRecent) {
+      known.push(...state.threads.filter(thread => thread.cwd).map(thread => directoryProject(thread.cwd)));
+    }
     if (cwd) known.push(state.draftProject?.cwd === cwd ? state.draftProject : directoryProject(cwd));
     const unique = new Map<string, ChatProject>();
     for (const project of known) {
       if (project.cwd && !unique.has(project.cwd)) unique.set(project.cwd, project);
     }
     return [...unique.values()];
-  }, [saved, state.threads, state.draftProject, cwd]);
+  }, [saved, state.threads, state.draftProject, cwd, includeRecent]);
   const choose = (project: ChatProject | null) => {
     if (disabled) return;
     setSelectionError('');
