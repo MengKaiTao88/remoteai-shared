@@ -44,12 +44,12 @@ export function ChatCommandMenu({ catalog, query, skillsOnly, compactReason, cho
   const options: ComposerMenuOption[] = [
     ...(showCompact ? [{ key: 'compact', enabled: compactReason === null, choose: compact }] : []),
     ...(showGoal ? [{ key: 'goal', enabled: true, choose: goal }] : []),
-    ...choices,
     ...skills.map(skill => ({ key: skill.path, enabled: skill.enabled, choose: () => choose(skill) })),
+    ...choices,
   ];
   const keyboard = useComposerMenuKeyboard({ input, query, options, close });
   const commands = t('client.chat.commandsAndSkills');
-  const title = choices.length ? `${commands} · ${t('client.chat.plugins')}` : commands;
+  const title = choices.length && !skills.length ? `${commands} · ${t('client.chat.plugins')}` : commands;
   return <div className="chat-command-menu" style={surfaceTheme} aria-label={title}>
     <header><strong>{title}</strong>
       <button type="button" aria-label={t("client.chat.closeCommandsAndSkills")} onClick={close}>
@@ -62,12 +62,16 @@ export function ChatCommandMenu({ catalog, query, skillsOnly, compactReason, cho
       {showGoal && <button type="button" role="menuitem" aria-label={t("client.chat.goalMode")} onClick={goal}
         {...keyboard.optionProps('goal')}>
         <strong>{t("client.chat.goal")} <small>/goal</small></strong><small>{t("client.chat.keepWorkingUntilTheGoalIsComplete")}</small></button>}
-      {choices.map(option => <PluginOption key={option.key} option={option} {...keyboard.optionProps(option.key)} />)}
+      {skills.length > 0 && (showCompact || showGoal || choices.length > 0)
+        && <span role="presentation" className="chat-menu-section">{t('client.chat.skills')}</span>}
       {skills.map(skill => <FocusPreservingButton key={skill.path} role="menuitem" {...keyboard.optionProps(skill.path)}
         aria-label={t("client.chat.useSkill", { value1: skillLabel(skill) })}
         disabled={!skill.enabled} onClick={() => choose(skill)}>
         <strong>{skillLabel(skill)}{!skill.enabled && t("client.chat.disabled")}</strong>
         <small>{skillDescription(skill, language)}</small></FocusPreservingButton>)}
+      {choices.length > 0 && skills.length > 0
+        && <span role="presentation" className="chat-menu-section">{t('client.chat.plugins')}</span>}
+      {choices.map(option => <PluginOption key={option.key} option={option} {...keyboard.optionProps(option.key)} />)}
       {catalog.loading && !catalog.loaded && <p role="status">{t("client.chat.loadingSkills")}</p>}
       {catalog.error && <p role="status">{displayError(catalog.error)}</p>}
       {pluginCatalog.loading && <p role="status">{t("client.chat.loadingPlugins")}</p>}
@@ -129,7 +133,8 @@ export function ComposerPluginMenu({ catalog, query, load, chooseSkill, choosePl
   useLanguage();
   const { result, loading, error } = usePluginCatalog(load);
   const plugins = pluginOptions(result, query.toLocaleLowerCase(), choosePlugin);
-  const skills = result?.data.flatMap(group => group.skills) ?? catalog.skills;
+  const skills = result?.data.some(group => !group.errors.length)
+    ? result.data.flatMap(group => group.skills) : catalog.skills;
   const options = skills.filter(skill => skill.enabled
     && `${skillLabel(skill)} ${skill.name}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
   const skillOptions = options.map(skill => ({ key: skill.path, enabled: true, choose: () => chooseSkill(skill) }));

@@ -4,6 +4,7 @@ import { modelSelectionError } from '../../conversation/modelSelection';
 import { openPreparedDownload } from '../archiveDownload';
 import { mergeTaskDelivery } from '../taskDelivery';
 import type { RemoteComposerCatalog } from '../composerCatalog';
+import { ComposerCatalogCache } from './composerCatalogCache';
 import type { ProjectFilesRequest, ProjectFilesResponse } from '../projectFiles';
 import { applyChatEvent } from './events';
 import { isTextDelta, StreamFrame } from '../../chat/streamFrame';
@@ -145,6 +146,7 @@ export class ChatController {
   private synchronization = 0;
   private synchronizing?: number;
   private skillGeneration = 0;
+  private readonly composerCatalog = new ComposerCatalogCache();
   private active = false;
   private stopped = false;
   private transportConnected = false;
@@ -945,22 +947,20 @@ export class ChatController {
         operation: 'textPreview', threadId, path,
       });
 
-  loadSkills = async (cwd: string) => {
+  loadSkills = (cwd: string, threadId?: string): Promise<SkillsResponse> => this.readComposerCatalog(cwd, threadId, false);
+
+  loadComposerCatalog = (cwd: string, threadId?: string) => this.readComposerCatalog(cwd, threadId, true);
+
+  private async readComposerCatalog(cwd: string, threadId: string | undefined, includePlugins: boolean) {
     const generation = this.skillGeneration;
-    const result = await this.request<SkillsResponse>({ operation: 'skills', cwd: cwd || undefined });
-    // Switching between relay and direct transport still returns the same computer's catalog.
+    const key = JSON.stringify([cwd, threadId, includePlugins]);
+    const result = await this.composerCatalog.read(generation, key, () =>
+      this.connection.request<RemoteComposerCatalog>('request', {
+        operation: 'skills', cwd: cwd || undefined, threadId, ...(includePlugins ? { includePlugins } : {}),
+      }));
     if (!this.active || generation !== this.skillGeneration) throw new Error('连接已中断，请重新打开技能菜单。');
     return result;
-  };
-
-  loadComposerCatalog = async (cwd: string, threadId?: string) => {
-    const generation = this.skillGeneration;
-    const result = await this.connection.request<RemoteComposerCatalog>('request', {
-      operation: 'skills', cwd: cwd || undefined, threadId, includePlugins: true,
-    });
-    if (!this.active || generation !== this.skillGeneration) throw new Error('请连接电脑后重新打开插件。');
-    return result;
-  };
+  }
 
   loadProjectFiles = (options: ProjectFilesRequest) =>
     this.connection.request<ProjectFilesResponse>('request', { operation: 'projectFiles', ...options });
